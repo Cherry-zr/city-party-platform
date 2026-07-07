@@ -21,10 +21,13 @@ public class ActivityVO {
     private String address;
     private BigDecimal longitude;
     private BigDecimal latitude;
+    private BigDecimal distanceKm;
     private Integer minParticipants;
     private Integer maxParticipants;
     private String costType;
     private BigDecimal costAmount;
+    private String feeType;
+    private BigDecimal feeAmount;
     private String aaRule;
     private String coverUrl;
     private String description;
@@ -33,8 +36,12 @@ public class ActivityVO {
     private String status;
     private Integer approvedCount;
     private Integer favoriteCount;
+    private Long waitlistCount;
     private Boolean favorited;
     private String signupStatus;
+    private Boolean canJoinWaitlist;
+    private String creatorNickname;
+    private String creatorAvatar;
     private CreatorVO creator;
     private LocalDateTime createdAt;
 }

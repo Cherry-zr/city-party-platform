@@ -18,7 +18,7 @@
       <van-cell title="我的搭子" value="开发中" is-link to="/partner" />
       <van-cell title="我的评价" value="第二阶段" />
       <van-cell title="AA账单" value="第二阶段" />
-      <van-cell title="系统通知" value="第二阶段" />
+      <van-cell title="系统通知" is-link to="/notices" />
       <van-cell v-if="auth.isAdmin" title="管理员后台" is-link to="/admin/dashboard" />
     </van-cell-group>
     <div class="mobile-content">

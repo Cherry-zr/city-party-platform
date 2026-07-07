@@ -10,12 +10,17 @@
       <div class="activity-meta">
         <div>{{ formatDateTime(activity.startTime) }} · {{ activity.city }}</div>
         <div>{{ activity.address }}</div>
-        <div>{{ activity.approvedCount }}/{{ activity.maxParticipants }} 人 · {{ formatCost(activity) }}</div>
+        <div>
+          {{ activity.approvedCount }}/{{ activity.maxParticipants }} 人 · {{ formatCost(activity) }}
+          <span v-if="activity.distanceKm !== null && activity.distanceKm !== undefined"> · 约 {{ activity.distanceKm }} km</span>
+        </div>
       </div>
       <van-space style="margin-top: 10px">
         <van-image round width="28" height="28" :src="activity.creator?.avatarUrl || avatarFallback" />
         <span>{{ activity.creator?.nickname || '发起人' }}</span>
         <van-tag v-if="activity.favorited" type="danger" plain>已收藏</van-tag>
+        <van-tag v-if="activity.approvedCount >= activity.maxParticipants" type="warning" plain>已满员</van-tag>
+        <van-tag v-if="activity.waitlistCount > 0" type="primary" plain>候补 {{ activity.waitlistCount }}</van-tag>
       </van-space>
     </div>
   </div>

@@ -13,7 +13,9 @@ import com.cityparty.module.signup.entity.ActivitySignup;
 import com.cityparty.module.signup.mapper.ActivitySignupMapper;
 import com.cityparty.module.signup.vo.SignupVO;
 import com.cityparty.module.user.service.UserService;
+import com.cityparty.module.waitlist.service.ActivityWaitlistService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,8 @@ public class SignupService {
     private final ActivityMapper activityMapper;
     private final ActivityService activityService;
     private final UserService userService;
+    @Lazy
+    private final ActivityWaitlistService waitlistService;
 
     @Transactional(rollbackFor = Exception.class)
     public SignupVO signup(Long activityId, SignupCreateDTO dto) {
@@ -38,9 +42,6 @@ public class SignupService {
         if (!"SIGNING".equals(activity.getStatus()) && !"FULL".equals(activity.getStatus())) {
             throw new BusinessException("当前活动状态不可报名");
         }
-        if (activity.getApprovedCount() >= activity.getMaxParticipants()) {
-            throw new BusinessException("活动已满员");
-        }
         ActivitySignup existed = signupMapper.selectOne(new LambdaQueryWrapper<ActivitySignup>()
                 .eq(ActivitySignup::getActivityId, activityId)
                 .eq(ActivitySignup::getUserId, userId)
@@ -49,8 +50,11 @@ public class SignupService {
         LocalDateTime now = LocalDateTime.now();
         String nextStatus = Integer.valueOf(1).equals(activity.getNeedApproval()) ? "PENDING" : "APPROVED";
         ActivitySignup signup = existed == null ? new ActivitySignup() : existed;
-        if (existed != null && ("PENDING".equals(existed.getStatus()) || "APPROVED".equals(existed.getStatus()))) {
+        if (existed != null && ("PENDING".equals(existed.getStatus()) || "APPROVED".equals(existed.getStatus()) || "WAITING".equals(existed.getStatus()))) {
             throw new BusinessException("已报名该活动");
+        }
+        if (activity.getApprovedCount() >= activity.getMaxParticipants()) {
+            throw new BusinessException(409, "活动已满员，可以加入候补队列");
         }
         signup.setActivityId(activityId);
         signup.setUserId(userId);
@@ -84,12 +88,18 @@ public class SignupService {
         }
         Activity activity = activityService.requireActivity(activityId);
         String oldStatus = signup.getStatus();
+        if ("WAITING".equals(oldStatus)) {
+            waitlistService.cancelWaitlistForUser(activityId, userId);
+            ActivitySignup updated = signupMapper.selectById(signup.getId());
+            return toVO(updated);
+        }
         signup.setStatus("CANCELLED");
         signup.setUpdatedAt(LocalDateTime.now());
         signupMapper.updateById(signup);
         if ("APPROVED".equals(oldStatus) && activity.getApprovedCount() > 0) {
             activity.setApprovedCount(activity.getApprovedCount() - 1);
             activityService.refreshStatusAfterCountChange(activity);
+            waitlistService.promoteNextIfAvailable(activityId);
         }
         return toVO(signup);
     }

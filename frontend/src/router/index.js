@@ -14,6 +14,7 @@ import EditProfile from '../views/mobile/EditProfile.vue'
 import UserProfile from '../views/mobile/UserProfile.vue'
 import ActivityMap from '../views/mobile/ActivityMap.vue'
 import Partner from '../views/mobile/Partner.vue'
+import SystemNotices from '../views/mobile/SystemNotices.vue'
 import AdminLayout from '../views/admin/AdminLayout.vue'
 import Dashboard from '../views/admin/Dashboard.vue'
 import UserManage from '../views/admin/UserManage.vue'
@@ -39,6 +40,7 @@ const routes = [
       { path: 'profile/edit', component: EditProfile },
       { path: 'users/:id', component: UserProfile },
       { path: 'map', component: ActivityMap },
+      { path: 'notices', component: SystemNotices },
       { path: 'partner', component: Partner }
     ]
   },

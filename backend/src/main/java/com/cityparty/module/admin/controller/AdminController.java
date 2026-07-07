@@ -51,9 +51,10 @@ public class AdminController {
     @Operation(summary = "报名管理列表")
     @GetMapping("/signups")
     public Result<PageResult<SignupVO>> signups(@RequestParam(required = false) Long activityId,
+                                                @RequestParam(required = false) String status,
                                                 @RequestParam(defaultValue = "1") Long current,
                                                 @RequestParam(defaultValue = "10") Long size) {
-        return Result.ok(adminService.signups(activityId, current, size));
+        return Result.ok(adminService.signups(activityId, status, current, size));
     }
 
     @Operation(summary = "信用分管理列表，第一阶段只展示")

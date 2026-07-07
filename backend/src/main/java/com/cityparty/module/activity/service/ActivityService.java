@@ -20,14 +20,19 @@ import com.cityparty.module.user.entity.User;
 import com.cityparty.module.user.entity.UserProfile;
 import com.cityparty.module.user.mapper.UserMapper;
 import com.cityparty.module.user.mapper.UserProfileMapper;
+import com.cityparty.module.waitlist.entity.ActivityWaitlist;
+import com.cityparty.module.waitlist.mapper.ActivityWaitlistMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -40,6 +45,7 @@ public class ActivityService {
     private final ActivityFavoriteMapper favoriteMapper;
     private final UserMapper userMapper;
     private final UserProfileMapper userProfileMapper;
+    private final ActivityWaitlistMapper waitlistMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public ActivityVO create(ActivityCreateDTO dto) {
@@ -102,6 +108,46 @@ public class ActivityService {
         return new PageResult<>(page.getRecords().stream().map(this::toVO).toList(), page.getTotal(), page.getCurrent(), page.getSize());
     }
 
+    public PageResult<ActivityVO> nearby(BigDecimal longitude,
+                                         BigDecimal latitude,
+                                         BigDecimal distanceKm,
+                                         String category,
+                                         String tag,
+                                         String city,
+                                         long current,
+                                         long size) {
+        BigDecimal maxDistance = distanceKm == null ? BigDecimal.valueOf(5) : distanceKm;
+        if (longitude == null || latitude == null) {
+            return page(null, category, tag, city, null, current, size);
+        }
+        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<Activity>()
+                .eq(Activity::getDeleted, 0)
+                .isNotNull(Activity::getLongitude)
+                .isNotNull(Activity::getLatitude);
+        if (StringUtils.hasText(category)) {
+            wrapper.eq(Activity::getCategory, category);
+        }
+        if (StringUtils.hasText(tag)) {
+            wrapper.like(Activity::getTags, tag);
+        }
+        if (StringUtils.hasText(city)) {
+            wrapper.eq(Activity::getCity, city);
+        }
+        List<ActivityVO> sorted = activityMapper.selectList(wrapper).stream()
+                .map(activity -> {
+                    ActivityVO vo = toVO(activity);
+                    vo.setDistanceKm(calculateDistanceKm(latitude, longitude, activity.getLatitude(), activity.getLongitude()));
+                    return vo;
+                })
+                .filter(vo -> vo.getDistanceKm() != null && vo.getDistanceKm().compareTo(maxDistance) <= 0)
+                .sorted(Comparator.comparing(ActivityVO::getDistanceKm))
+                .toList();
+        long from = Math.max((current - 1) * size, 0);
+        long to = Math.min(from + size, sorted.size());
+        List<ActivityVO> records = from >= sorted.size() ? Collections.emptyList() : sorted.subList((int) from, (int) to);
+        return new PageResult<>(records, (long) sorted.size(), current, size);
+    }
+
     public ActivityVO detail(Long id) {
         return toVO(requireActivity(id));
     }
@@ -140,6 +186,8 @@ public class ActivityService {
         vo.setMaxParticipants(activity.getMaxParticipants());
         vo.setCostType(activity.getCostType());
         vo.setCostAmount(activity.getCostAmount());
+        vo.setFeeType(activity.getCostType());
+        vo.setFeeAmount(activity.getCostAmount());
         vo.setAaRule(activity.getAaRule());
         vo.setCoverUrl(activity.getCoverUrl());
         vo.setDescription(activity.getDescription());
@@ -148,12 +196,20 @@ public class ActivityService {
         vo.setStatus(activity.getStatus());
         vo.setApprovedCount(activity.getApprovedCount());
         vo.setFavoriteCount(activity.getFavoriteCount());
+        vo.setWaitlistCount(waitlistMapper.selectCount(new LambdaQueryWrapper<ActivityWaitlist>()
+                .eq(ActivityWaitlist::getActivityId, activity.getId())
+                .eq(ActivityWaitlist::getStatus, "WAITING")
+                .eq(ActivityWaitlist::getDeleted, 0)));
         vo.setCreatedAt(activity.getCreatedAt());
-        vo.setCreator(buildCreator(activity.getCreatorId()));
+        CreatorVO creator = buildCreator(activity.getCreatorId());
+        vo.setCreator(creator);
+        vo.setCreatorNickname(creator.getNickname());
+        vo.setCreatorAvatar(creator.getAvatarUrl());
         Long userId = UserContext.getUserIdOrNull();
         if (userId == null) {
             vo.setFavorited(false);
             vo.setSignupStatus(null);
+            vo.setCanJoinWaitlist(false);
             return vo;
         }
         vo.setFavorited(favoriteMapper.selectCount(new LambdaQueryWrapper<ActivityFavorite>()
@@ -167,6 +223,11 @@ public class ActivityService {
                 .orderByDesc(ActivitySignup::getCreatedAt)
                 .last("limit 1"));
         vo.setSignupStatus(signup == null ? null : signup.getStatus());
+        vo.setCanJoinWaitlist(activity.getApprovedCount() >= activity.getMaxParticipants()
+                && !activity.getCreatorId().equals(userId)
+                && (signup == null || (!"PENDING".equals(signup.getStatus())
+                && !"APPROVED".equals(signup.getStatus())
+                && !"WAITING".equals(signup.getStatus()))));
         return vo;
     }
 
@@ -223,5 +284,24 @@ public class ActivityService {
             return Collections.emptyList();
         }
         return Arrays.stream(tags.split(",")).filter(StringUtils::hasText).toList();
+    }
+
+    private BigDecimal calculateDistanceKm(BigDecimal latitude,
+                                           BigDecimal longitude,
+                                           BigDecimal targetLatitude,
+                                           BigDecimal targetLongitude) {
+        if (latitude == null || longitude == null || targetLatitude == null || targetLongitude == null) {
+            return null;
+        }
+        double earthRadiusKm = 6371.0088;
+        double lat1 = Math.toRadians(latitude.doubleValue());
+        double lat2 = Math.toRadians(targetLatitude.doubleValue());
+        double deltaLat = Math.toRadians(targetLatitude.subtract(latitude).doubleValue());
+        double deltaLng = Math.toRadians(targetLongitude.subtract(longitude).doubleValue());
+        double a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2)
+                + Math.cos(lat1) * Math.cos(lat2)
+                * Math.sin(deltaLng / 2) * Math.sin(deltaLng / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return BigDecimal.valueOf(earthRadiusKm * c).setScale(2, RoundingMode.HALF_UP);
     }
 }

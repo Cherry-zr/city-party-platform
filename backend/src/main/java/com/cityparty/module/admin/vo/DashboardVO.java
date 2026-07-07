@@ -9,4 +9,6 @@ public class DashboardVO {
     private Long activityCount;
     private Long signupCount;
     private Long favoriteCount;
+    private Long waitlistCount;
+    private Long unreadNoticeCount;
 }

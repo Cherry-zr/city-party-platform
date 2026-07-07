@@ -4,6 +4,10 @@ export function listActivities(params) {
   return request.get('/api/activities', { params })
 }
 
+export function listNearbyActivities(params) {
+  return request.get('/api/activities/nearby', { params })
+}
+
 export function getActivity(id) {
   return request.get(`/api/activities/${id}`)
 }
@@ -18,4 +22,16 @@ export function myActivities(params) {
 
 export function activitySignups(id, params) {
   return request.get(`/api/activities/${id}/signups`, { params })
+}
+
+export function joinWaitlist(id) {
+  return request.post(`/api/activities/${id}/waitlist`)
+}
+
+export function cancelWaitlist(id) {
+  return request.post(`/api/activities/${id}/waitlist/cancel`)
+}
+
+export function activityWaitlist(id, params) {
+  return request.get(`/api/activities/${id}/waitlist`, { params })
 }

@@ -11,6 +11,13 @@
         <van-field v-model="form.signupDeadline" label="截止时间" placeholder="2026-08-01T12:00:00" required />
         <van-field v-model="form.city" label="城市" required />
         <van-field v-model="form.address" label="地址" required />
+        <van-field v-model.number="form.longitude" label="经度" type="number" placeholder="可手动填写或地图选点" />
+        <van-field v-model.number="form.latitude" label="纬度" type="number" placeholder="可手动填写或地图选点" />
+        <van-cell title="地图选点" :label="locationSummary">
+          <template #right-icon>
+            <van-button size="small" plain type="primary" native-type="button" @click.stop="showPicker = true">选择地点</van-button>
+          </template>
+        </van-cell>
         <van-field v-model.number="form.minParticipants" label="最小人数" type="number" required />
         <van-field v-model.number="form.maxParticipants" label="最大人数" type="number" required />
         <van-field v-model="form.costType" label="费用类型" is-link readonly @click="showCost = true" required />
@@ -28,19 +35,29 @@
     </van-form>
     <van-action-sheet v-model:show="showCategory" :actions="categories.map(name => ({ name }))" @select="selectCategory" />
     <van-action-sheet v-model:show="showCost" :actions="costs" @select="selectCost" />
+    <AmapLocationPicker
+      v-model:show="showPicker"
+      :initial-city="form.city"
+      :initial-address="form.address"
+      :initial-longitude="form.longitude"
+      :initial-latitude="form.latitude"
+      @select="selectLocation"
+    />
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { showSuccessToast } from 'vant'
 import { createActivity } from '../../api/activity'
+import AmapLocationPicker from '../../components/AmapLocationPicker.vue'
 
 const router = useRouter()
 const loading = ref(false)
 const showCategory = ref(false)
 const showCost = ref(false)
+const showPicker = ref(false)
 const tagText = ref('AA制,新手友好')
 const categories = ['观影', '聚餐', '运动', '桌游', '学习', '探店', '户外', '游戏', '展览', '其他']
 const costs = [
@@ -70,6 +87,11 @@ const form = reactive({
   needApproval: false
 })
 
+const locationSummary = computed(() => {
+  if (!form.longitude || !form.latitude) return '未选择坐标'
+  return `${form.longitude}, ${form.latitude}`
+})
+
 function selectCategory(item) {
   form.category = item.name
   showCategory.value = false
@@ -78,6 +100,13 @@ function selectCategory(item) {
 function selectCost(item) {
   form.costType = item.value
   showCost.value = false
+}
+
+function selectLocation(location) {
+  form.city = location.city || form.city
+  form.address = location.address || form.address
+  form.longitude = location.longitude
+  form.latitude = location.latitude
 }
 
 async function submit() {

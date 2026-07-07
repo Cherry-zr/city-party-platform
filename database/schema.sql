@@ -12,6 +12,7 @@ DROP TABLE IF EXISTS partner_request;
 DROP TABLE IF EXISTS credit_record;
 DROP TABLE IF EXISTS chat_message;
 DROP TABLE IF EXISTS activity_favorite;
+DROP TABLE IF EXISTS activity_waitlist;
 DROP TABLE IF EXISTS activity_signup;
 DROP TABLE IF EXISTS activity_tag;
 DROP TABLE IF EXISTS activity;
@@ -113,7 +114,7 @@ CREATE TABLE activity_signup (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   activity_id BIGINT NOT NULL,
   user_id BIGINT NOT NULL,
-  status VARCHAR(20) NOT NULL COMMENT 'PENDING/APPROVED/REJECTED/WAITING/CANCELLED/COMPLETED/ABSENT',
+  status VARCHAR(20) NOT NULL COMMENT 'PENDING/APPROVED/REJECTED/WAITING/CANCELLED/COMPLETED/ABSENT/PROMOTED',
   apply_message VARCHAR(300) NULL,
   reviewed_at DATETIME NULL,
   created_at DATETIME NOT NULL,
@@ -123,6 +124,21 @@ CREATE TABLE activity_signup (
   INDEX idx_signup_user (user_id),
   INDEX idx_signup_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动报名表';
+
+CREATE TABLE activity_waitlist (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  activity_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  status VARCHAR(20) NOT NULL DEFAULT 'WAITING' COMMENT 'WAITING/PROMOTED/CANCELLED',
+  queue_no BIGINT NOT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_waitlist_activity_user (activity_id, user_id),
+  INDEX idx_waitlist_activity_status (activity_id, status),
+  INDEX idx_waitlist_user (user_id),
+  INDEX idx_waitlist_queue (activity_id, queue_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动候补队列表';
 
 CREATE TABLE activity_favorite (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -230,6 +246,7 @@ CREATE TABLE system_notice (
   type VARCHAR(50) NOT NULL,
   title VARCHAR(120) NOT NULL,
   content VARCHAR(500) NOT NULL,
+  related_id BIGINT NULL,
   read_flag TINYINT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0

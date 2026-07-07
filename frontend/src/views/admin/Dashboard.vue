@@ -20,7 +20,9 @@ const cards = computed(() => [
   { label: '用户数', value: data.value.userCount },
   { label: '活动数', value: data.value.activityCount },
   { label: '报名数', value: data.value.signupCount },
-  { label: '收藏数', value: data.value.favoriteCount }
+  { label: '收藏数', value: data.value.favoriteCount },
+  { label: '候补中', value: data.value.waitlistCount || 0 },
+  { label: '未读通知', value: data.value.unreadNoticeCount || 0 }
 ])
 
 onMounted(async () => {

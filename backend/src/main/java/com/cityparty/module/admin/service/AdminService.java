@@ -15,10 +15,14 @@ import com.cityparty.module.signup.entity.ActivitySignup;
 import com.cityparty.module.signup.mapper.ActivitySignupMapper;
 import com.cityparty.module.signup.service.SignupService;
 import com.cityparty.module.signup.vo.SignupVO;
+import com.cityparty.module.notice.entity.SystemNotice;
+import com.cityparty.module.notice.mapper.SystemNoticeMapper;
 import com.cityparty.module.user.entity.User;
 import com.cityparty.module.user.mapper.UserMapper;
 import com.cityparty.module.user.service.UserService;
 import com.cityparty.module.user.vo.UserMeVO;
+import com.cityparty.module.waitlist.entity.ActivityWaitlist;
+import com.cityparty.module.waitlist.mapper.ActivityWaitlistMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -31,6 +35,8 @@ public class AdminService {
     private final ActivitySignupMapper signupMapper;
     private final ActivityFavoriteMapper favoriteMapper;
     private final ReportMapper reportMapper;
+    private final ActivityWaitlistMapper waitlistMapper;
+    private final SystemNoticeMapper noticeMapper;
     private final UserService userService;
     private final ActivityService activityService;
     private final SignupService signupService;
@@ -41,6 +47,12 @@ public class AdminService {
         vo.setActivityCount(activityService.page(null, null, null, null, null, 1, 1).getTotal());
         vo.setSignupCount(signupMapper.selectCount(new LambdaQueryWrapper<ActivitySignup>().eq(ActivitySignup::getDeleted, 0)));
         vo.setFavoriteCount(favoriteMapper.selectCount(new LambdaQueryWrapper<ActivityFavorite>().eq(ActivityFavorite::getDeleted, 0)));
+        vo.setWaitlistCount(waitlistMapper.selectCount(new LambdaQueryWrapper<ActivityWaitlist>()
+                .eq(ActivityWaitlist::getStatus, "WAITING")
+                .eq(ActivityWaitlist::getDeleted, 0)));
+        vo.setUnreadNoticeCount(noticeMapper.selectCount(new LambdaQueryWrapper<SystemNotice>()
+                .eq(SystemNotice::getReadFlag, 0)
+                .eq(SystemNotice::getDeleted, 0)));
         return vo;
     }
 
@@ -59,13 +71,17 @@ public class AdminService {
         return activityService.page(keyword, category, null, null, status, current, size);
     }
 
-    public PageResult<SignupVO> signups(Long activityId, long current, long size) {
-        if (activityId != null) {
-            return signupService.activitySignups(activityId, current, size);
-        }
-        Page<ActivitySignup> page = signupMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<ActivitySignup>()
+    public PageResult<SignupVO> signups(Long activityId, String status, long current, long size) {
+        LambdaQueryWrapper<ActivitySignup> wrapper = new LambdaQueryWrapper<ActivitySignup>()
                 .eq(ActivitySignup::getDeleted, 0)
-                .orderByDesc(ActivitySignup::getCreatedAt));
+                .orderByDesc(ActivitySignup::getCreatedAt);
+        if (activityId != null) {
+            wrapper.eq(ActivitySignup::getActivityId, activityId);
+        }
+        if (StringUtils.hasText(status)) {
+            wrapper.eq(ActivitySignup::getStatus, status);
+        }
+        Page<ActivitySignup> page = signupMapper.selectPage(new Page<>(current, size), wrapper);
         return new PageResult<>(page.getRecords().stream().map(signupService::toVO).toList(), page.getTotal(), page.getCurrent(), page.getSize());
     }
 

@@ -1,13 +1,11 @@
-package com.cityparty.module.notice.entity;
+package com.cityparty.module.notice.vo;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-@TableName("system_notice")
-public class SystemNotice {
+public class SystemNoticeVO {
 
     private Long id;
     private Long userId;
@@ -15,7 +13,6 @@ public class SystemNotice {
     private String title;
     private String content;
     private Long relatedId;
-    private Integer readFlag;
+    private Boolean read;
     private LocalDateTime createdAt;
-    private Integer deleted;
 }
