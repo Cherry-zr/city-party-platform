@@ -29,8 +29,8 @@ const routes = [
     path: '/',
     component: MobileLayout,
     children: [
-      { path: '', component: Home },
-      { path: 'activities/:id', component: ActivityDetail },
+      { path: '', component: Home, meta: { public: true } },
+      { path: 'activities/:id', component: ActivityDetail, meta: { public: true } },
       { path: 'publish', component: PublishActivity },
       { path: 'my-activities', component: MyActivities },
       { path: 'my-signups', component: MySignups },

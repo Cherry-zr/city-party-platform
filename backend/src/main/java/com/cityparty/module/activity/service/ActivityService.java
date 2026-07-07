@@ -150,7 +150,12 @@ public class ActivityService {
         vo.setFavoriteCount(activity.getFavoriteCount());
         vo.setCreatedAt(activity.getCreatedAt());
         vo.setCreator(buildCreator(activity.getCreatorId()));
-        Long userId = UserContext.getUserId();
+        Long userId = UserContext.getUserIdOrNull();
+        if (userId == null) {
+            vo.setFavorited(false);
+            vo.setSignupStatus(null);
+            return vo;
+        }
         vo.setFavorited(favoriteMapper.selectCount(new LambdaQueryWrapper<ActivityFavorite>()
                 .eq(ActivityFavorite::getActivityId, activity.getId())
                 .eq(ActivityFavorite::getUserId, userId)

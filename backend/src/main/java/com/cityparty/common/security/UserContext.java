@@ -21,8 +21,17 @@ public final class UserContext {
         return loginUser;
     }
 
+    public static LoginUser getOrNull() {
+        return CURRENT.get();
+    }
+
     public static Long getUserId() {
         return get().getUserId();
+    }
+
+    public static Long getUserIdOrNull() {
+        LoginUser loginUser = getOrNull();
+        return loginUser == null ? null : loginUser.getUserId();
     }
 
     public static boolean isAdmin() {
