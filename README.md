@@ -149,17 +149,31 @@ Vite 已配置代理：
 8. 报名活动：`POST /api/activities/{id}/signup`
 9. 退出报名：`POST /api/activities/{id}/signup/cancel`
 10. 审核报名：`POST /api/signups/{signupId}/review`
-11. 收藏活动：`POST /api/activities/{id}/favorite`
-12. 我的收藏：`GET /api/favorites/my`
-13. 后台看板：`GET /api/admin/dashboard`
-14. 后台用户：`GET /api/admin/users`
-15. 后台活动：`GET /api/admin/activities`
-16. 后台报名：`GET /api/admin/signups`
+11. 报名兼容接口：`POST /api/signups`，请求体传 `activityId`
+12. 审核通过兼容接口：`POST /api/signups/{signupId}/approve`
+13. 审核拒绝兼容接口：`POST /api/signups/{signupId}/reject`
+14. 收藏活动：`POST /api/activities/{id}/favorite`
+15. 收藏兼容接口：`POST /api/favorites/{activityId}`
+16. 我的收藏：`GET /api/favorites/my`
+17. 后台看板：`GET /api/admin/dashboard`
+18. 后台用户：`GET /api/admin/users`
+19. 后台活动：`GET /api/admin/activities`
+20. 后台报名：`GET /api/admin/signups`
 
 请求需要在 `Authorization` 请求头携带：
 
 ```text
 Bearer 登录返回的token
+```
+
+未匹配的 `/api/**` 请求会返回统一错误结构：
+
+```json
+{
+  "code": 404,
+  "message": "接口不存在",
+  "data": null
+}
 ```
 
 ## 第一阶段已完成功能

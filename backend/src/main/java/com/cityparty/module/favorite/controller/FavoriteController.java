@@ -30,6 +30,13 @@ public class FavoriteController {
         return Result.ok();
     }
 
+    @Operation(summary = "收藏活动（兼容接口）")
+    @PostMapping("/favorites/{activityId}")
+    public Result<Void> favoriteCompat(@PathVariable Long activityId) {
+        favoriteService.favorite(activityId);
+        return Result.ok();
+    }
+
     @Operation(summary = "取消收藏")
     @DeleteMapping("/activities/{activityId}/favorite")
     public Result<Void> unfavorite(@PathVariable Long activityId) {

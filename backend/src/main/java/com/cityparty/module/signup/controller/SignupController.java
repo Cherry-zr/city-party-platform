@@ -2,6 +2,7 @@ package com.cityparty.module.signup.controller;
 
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.result.Result;
+import com.cityparty.common.exception.BusinessException;
 import com.cityparty.module.signup.dto.SignupCreateDTO;
 import com.cityparty.module.signup.dto.SignupReviewDTO;
 import com.cityparty.module.signup.service.SignupService;
@@ -32,6 +33,15 @@ public class SignupController {
         return Result.ok(signupService.signup(activityId, dto));
     }
 
+    @Operation(summary = "报名活动（兼容接口）")
+    @PostMapping("/signups")
+    public Result<SignupVO> signupCompat(@RequestBody SignupCreateDTO dto) {
+        if (dto == null || dto.getActivityId() == null) {
+            throw new BusinessException(400, "activityId 不能为空");
+        }
+        return Result.ok(signupService.signup(dto.getActivityId(), dto));
+    }
+
     @Operation(summary = "退出活动")
     @PostMapping("/activities/{activityId}/signup/cancel")
     public Result<SignupVO> cancel(@PathVariable Long activityId) {
@@ -42,6 +52,18 @@ public class SignupController {
     @PostMapping("/signups/{signupId}/review")
     public Result<SignupVO> review(@PathVariable Long signupId, @Valid @RequestBody SignupReviewDTO dto) {
         return Result.ok(signupService.review(signupId, dto.getStatus()));
+    }
+
+    @Operation(summary = "通过报名（兼容接口）")
+    @PostMapping("/signups/{signupId}/approve")
+    public Result<SignupVO> approve(@PathVariable Long signupId) {
+        return Result.ok(signupService.review(signupId, "APPROVED"));
+    }
+
+    @Operation(summary = "拒绝报名（兼容接口）")
+    @PostMapping("/signups/{signupId}/reject")
+    public Result<SignupVO> reject(@PathVariable Long signupId) {
+        return Result.ok(signupService.review(signupId, "REJECTED"));
     }
 
     @Operation(summary = "我的报名")
