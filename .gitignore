@@ -1,0 +1,24 @@
+# Java / Maven
+backend/target/
+*.class
+
+# Node / Vite
+frontend/node_modules/
+frontend/dist/
+
+# Runtime uploads
+backend/uploads/avatar/*
+backend/uploads/activity/*
+!backend/uploads/avatar/.gitkeep
+!backend/uploads/activity/.gitkeep
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Logs and env
+*.log
+.env

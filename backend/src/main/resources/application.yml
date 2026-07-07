@@ -1,0 +1,53 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: city-party-backend
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:city_party_platform}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:123456}
+  data:
+    redis:
+      host: ${REDIS_HOST:127.0.0.1}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      timeout: 5s
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 5MB
+
+mybatis-plus:
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+knife4j:
+  enable: true
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+city-party:
+  jwt:
+    secret: ${JWT_SECRET:city-party-local-development-secret-change-me}
+    expire-minutes: ${JWT_EXPIRE_MINUTES:4320}
+  password:
+    salt: ${PASSWORD_SALT:cityparty}
+  upload:
+    base-dir: ${UPLOAD_BASE_DIR:uploads}
+    avatar-dir: avatar
+    activity-dir: activity
+    public-prefix: /uploads
