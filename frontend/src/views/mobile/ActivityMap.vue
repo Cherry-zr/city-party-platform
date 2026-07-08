@@ -9,7 +9,20 @@
     </van-notice-bar>
 
     <div class="plain-panel map-filter-panel">
-      <van-segmented v-model="distanceKm" :options="distanceOptions" @change="loadNearbyActivities" />
+      <div class="distance-segmented" role="radiogroup" aria-label="附近活动距离筛选">
+        <button
+          v-for="option in distanceOptions"
+          :key="option.value"
+          type="button"
+          class="distance-segmented__item"
+          :class="{ 'distance-segmented__item--active': distanceKm === option.value }"
+          :aria-checked="distanceKm === option.value"
+          role="radio"
+          @click="selectDistance(option.value)"
+        >
+          {{ option.text }}
+        </button>
+      </div>
       <div class="activity-meta">{{ locationText }}</div>
     </div>
 
@@ -143,6 +156,12 @@ async function loadNearbyActivities() {
   }
 }
 
+async function selectDistance(value) {
+  if (distanceKm.value === value) return
+  distanceKm.value = value
+  await loadNearbyActivities()
+}
+
 function renderMarkers() {
   if (!AMapInstance || !map) return
   map.remove(markers)
@@ -186,3 +205,39 @@ function openActivityInfo(activity, marker) {
   infoWindow.open(map, marker.getPosition())
 }
 </script>
+
+<style scoped>
+.distance-segmented {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f4f5f7;
+}
+
+.distance-segmented__item {
+  min-width: 0;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5f6b7a;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.distance-segmented__item--active {
+  background: #fff;
+  color: #1f2933;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(31, 41, 51, 0.12);
+}
+
+.distance-segmented__item:focus-visible {
+  outline: 2px solid #969da8;
+  outline-offset: 2px;
+}
+</style>
