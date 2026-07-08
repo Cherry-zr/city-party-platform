@@ -24,18 +24,18 @@ SET FOREIGN_KEY_CHECKS = 1;
 
 CREATE TABLE user (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  username VARCHAR(50) NOT NULL UNIQUE COMMENT '登录账号',
-  phone VARCHAR(30) NULL COMMENT '手机号',
-  password_hash VARCHAR(128) NOT NULL COMMENT '加密密码',
+  username VARCHAR(50) NOT NULL UNIQUE COMMENT 'login username',
+  phone VARCHAR(30) NULL COMMENT 'phone number',
+  password_hash VARCHAR(128) NOT NULL COMMENT 'password hash',
   role VARCHAR(20) NOT NULL DEFAULT 'USER' COMMENT 'USER/ADMIN',
   status VARCHAR(20) NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL/DISABLED',
-  credit_score INT NOT NULL DEFAULT 100 COMMENT '信用分',
+  credit_score INT NOT NULL DEFAULT 100 COMMENT 'credit score',
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0,
   INDEX idx_user_role (role),
   INDEX idx_user_deleted (deleted)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='user';
 
 CREATE TABLE user_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -49,14 +49,14 @@ CREATE TABLE user_profile (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_profile_user (user_id),
   INDEX idx_profile_city (city)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户资料表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='user profile';
 
 CREATE TABLE interest_tag (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(50) NOT NULL UNIQUE,
   sort_order INT NOT NULL DEFAULT 100,
   created_at DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='兴趣标签表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='interest tag';
 
 CREATE TABLE user_interest (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -64,13 +64,13 @@ CREATE TABLE user_interest (
   tag_id BIGINT NOT NULL,
   created_at DATETIME NOT NULL,
   UNIQUE KEY uk_user_tag (user_id, tag_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户兴趣标签关联表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='user interest';
 
 CREATE TABLE activity (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   creator_id BIGINT NOT NULL,
   title VARCHAR(120) NOT NULL,
-  category VARCHAR(30) NOT NULL COMMENT '观影/聚餐/运动/桌游/学习/探店/户外/游戏/展览/其他',
+  category VARCHAR(30) NOT NULL COMMENT 'activity category',
   tags VARCHAR(255) NULL,
   start_time DATETIME NOT NULL,
   end_time DATETIME NOT NULL,
@@ -99,7 +99,7 @@ CREATE TABLE activity (
   INDEX idx_activity_city (city),
   INDEX idx_activity_status (status),
   INDEX idx_activity_deleted (deleted)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity';
 
 CREATE TABLE activity_tag (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -108,7 +108,7 @@ CREATE TABLE activity_tag (
   created_at DATETIME NOT NULL,
   INDEX idx_activity_tag_activity (activity_id),
   INDEX idx_activity_tag_name (tag_name)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动标签表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity tag';
 
 CREATE TABLE activity_signup (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -123,7 +123,7 @@ CREATE TABLE activity_signup (
   INDEX idx_signup_activity (activity_id),
   INDEX idx_signup_user (user_id),
   INDEX idx_signup_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动报名表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity signup';
 
 CREATE TABLE activity_waitlist (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -138,7 +138,7 @@ CREATE TABLE activity_waitlist (
   INDEX idx_waitlist_activity_status (activity_id, status),
   INDEX idx_waitlist_user (user_id),
   INDEX idx_waitlist_queue (activity_id, queue_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动候补队列表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity waitlist';
 
 CREATE TABLE activity_favorite (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -148,7 +148,7 @@ CREATE TABLE activity_favorite (
   deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_favorite_user_activity (user_id, activity_id),
   INDEX idx_favorite_activity (activity_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动收藏表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity favorite';
 
 CREATE TABLE chat_message (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -157,7 +157,7 @@ CREATE TABLE chat_message (
   content VARCHAR(1000) NOT NULL,
   created_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动群聊消息预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='chat message';
 
 CREATE TABLE credit_record (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -169,7 +169,7 @@ CREATE TABLE credit_record (
   source_type VARCHAR(50) NULL,
   source_id BIGINT NULL,
   created_at DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='信用分记录预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='credit record';
 
 CREATE TABLE partner_request (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -180,7 +180,7 @@ CREATE TABLE partner_request (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='固定搭子申请预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='partner request';
 
 CREATE TABLE partner_relation (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -189,7 +189,7 @@ CREATE TABLE partner_relation (
   status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
   created_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='固定搭子关系预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='partner relation';
 
 CREATE TABLE aa_bill (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -201,7 +201,7 @@ CREATE TABLE aa_bill (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AA账单预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='aa bill';
 
 CREATE TABLE aa_bill_item (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -211,7 +211,7 @@ CREATE TABLE aa_bill_item (
   pay_status VARCHAR(20) NOT NULL DEFAULT 'UNCONFIRMED',
   confirmed_at DATETIME NULL,
   created_at DATETIME NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AA账单明细预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='aa bill item';
 
 CREATE TABLE activity_review (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -225,7 +225,7 @@ CREATE TABLE activity_review (
   content VARCHAR(500) NULL,
   created_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动评价预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity review';
 
 CREATE TABLE report (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -238,7 +238,7 @@ CREATE TABLE report (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='举报预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='report';
 
 CREATE TABLE system_notice (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -250,4 +250,4 @@ CREATE TABLE system_notice (
   read_flag TINYINT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统通知预留表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='system notice';

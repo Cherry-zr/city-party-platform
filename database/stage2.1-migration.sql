@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS activity_waitlist (
   INDEX idx_waitlist_activity_status (activity_id, status),
   INDEX idx_waitlist_user (user_id),
   INDEX idx_waitlist_queue (activity_id, queue_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='活动候补队列表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity waitlist';
 
 SET @related_id_exists = (
   SELECT COUNT(*)

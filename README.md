@@ -54,7 +54,7 @@ city-party-platform/
 
 先确认本机 MySQL 账号可以登录。推荐使用环境变量，不要把真实密码写进代码。
 
-PowerShell 示例：
+PowerShell 示例： 
 
 ```powershell
 $env:MYSQL_HOST="127.0.0.1"
