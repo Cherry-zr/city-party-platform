@@ -25,3 +25,8 @@ Thumbs.db
 frontend/.env
 frontend/.env.*
 !frontend/.env.example
+
+# Database backups
+backup_*.sql
+*_backup.sql
+*.bak.sql

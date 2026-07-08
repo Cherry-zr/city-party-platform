@@ -8,6 +8,10 @@ export function markNoticeRead(id) {
   return request.put(`/api/notices/${id}/read`)
 }
 
+export function markAllNoticesRead() {
+  return request.put('/api/notices/read-all')
+}
+
 export function unreadNoticeCount() {
   return request.get('/api/notices/unread-count')
 }

@@ -44,6 +44,9 @@ Authorization: Bearer <token>
 - `POST /api/activities/{id}/waitlist`
 - `POST /api/activities/{id}/waitlist/cancel`
 - `GET /api/activities/{id}/waitlist`
+- `GET /api/activities/{activityId}/chat/access`
+- `GET /api/activities/{activityId}/chat/messages`
+- `POST /api/activities/{activityId}/chat/messages`
 
 ### Nearby Activity
 
@@ -72,6 +75,26 @@ Authorization: Bearer <token>
 
 Redis Key：`activity:waitlist:{activityId}`。Redis List 维护顺序，MySQL `activity_waitlist` 保存持久记录。
 
+### Activity Chat
+
+- `GET /api/activities/{activityId}/chat/access`：检查当前用户是否可以进入活动群聊。
+- `GET /api/activities/{activityId}/chat/messages?current=1&size=50`：分页获取活动群聊历史消息。
+- `POST /api/activities/{activityId}/chat/messages`：发送群聊消息，兼容 HTTP 测试。
+
+群聊权限：
+
+- 活动发起人可以进入。
+- `APPROVED` 报名用户可以进入。
+- 未登录、未报名、`PENDING`、`WAITING`、`REJECTED`、`CANCELLED` 用户不能进入。
+
+HTTP 发送请求体：
+
+```json
+{
+  "content": "大家几点集合？"
+}
+```
+
 ## Signup
 
 - `POST /api/activities/{activityId}/signup`
@@ -92,6 +115,7 @@ Redis Key：`activity:waitlist:{activityId}`。Redis List 维护顺序，MySQL `
 
 - `GET /api/notices/my`
 - `PUT /api/notices/{id}/read`
+- `PUT /api/notices/read-all`
 - `GET /api/notices/unread-count`
 
 候补转正后会生成系统通知：
@@ -101,7 +125,65 @@ type = WAITLIST_PROMOTED
 title = 候补转正通知
 ```
 
-本阶段只保存 MySQL 通知记录，不做 WebSocket 实时推送。
+Stage 2.2 会在通知写入 MySQL 后通过 WebSocket 向在线用户实时推送。
+
+## WebSocket
+
+开发环境连接地址：
+
+```text
+ws://127.0.0.1:5173/ws?token=<JWT>
+```
+
+后端实际端点为 `/ws`，前端 Vite dev server 会把 `/ws` 代理到 `ws://127.0.0.1:8080/ws`。
+
+聊天发送：
+
+```json
+{
+  "type": "CHAT",
+  "activityId": 1,
+  "content": "大家几点集合？"
+}
+```
+
+聊天广播：
+
+```json
+{
+  "type": "CHAT",
+  "activityId": 1,
+  "messageId": 100,
+  "senderId": 2,
+  "senderNickname": "user02",
+  "senderAvatar": "/uploads/avatar/user02.png",
+  "content": "大家几点集合？",
+  "createdAt": "2026-07-08 19:00:00"
+}
+```
+
+通知推送：
+
+```json
+{
+  "type": "NOTICE",
+  "noticeId": 1,
+  "noticeType": "WAITLIST_PROMOTED",
+  "title": "候补转正通知",
+  "content": "你候补的活动已转为报名成功",
+  "relatedId": 20,
+  "createdAt": "2026-07-08 19:00:00"
+}
+```
+
+错误消息：
+
+```json
+{
+  "type": "ERROR",
+  "message": "报名成功后才能进入活动群聊"
+}
+```
 
 ## Favorite
 

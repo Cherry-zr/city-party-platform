@@ -5,6 +5,7 @@ import Login from '../views/mobile/Login.vue'
 import Register from '../views/mobile/Register.vue'
 import Home from '../views/mobile/Home.vue'
 import ActivityDetail from '../views/mobile/ActivityDetail.vue'
+import ActivityChat from '../views/mobile/ActivityChat.vue'
 import PublishActivity from '../views/mobile/PublishActivity.vue'
 import MyActivities from '../views/mobile/MyActivities.vue'
 import MySignups from '../views/mobile/MySignups.vue'
@@ -32,6 +33,7 @@ const routes = [
     children: [
       { path: '', component: Home, meta: { public: true } },
       { path: 'activities/:id', component: ActivityDetail, meta: { public: true } },
+      { path: 'activities/:id/chat', component: ActivityChat },
       { path: 'publish', component: PublishActivity },
       { path: 'my-activities', component: MyActivities },
       { path: 'my-signups', component: MySignups },

@@ -30,6 +30,12 @@
         </div>
       </van-space>
     </div>
+    <div class="plain-panel">
+      <van-button block :type="chatAccess.canAccess ? 'primary' : 'default'" plain @click="openChat">
+        {{ chatButtonText }}
+      </van-button>
+      <div v-if="!chatAccess.canAccess" class="activity-meta chat-access-reason">{{ chatAccess.reason }}</div>
+    </div>
     <van-space fill>
       <van-button block type="primary" :disabled="primaryDisabled" @click="doSignup">
         {{ signupText }}
@@ -45,15 +51,24 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showSuccessToast } from 'vant'
+import { showSuccessToast, showToast } from 'vant'
 import { cancelWaitlist, getActivity, joinWaitlist } from '../../api/activity'
+import { checkChatAccess } from '../../api/chat'
 import { signupActivity, cancelSignup } from '../../api/signup'
 import { favoriteActivity, unfavoriteActivity } from '../../api/favorite'
+import { useAuthStore } from '../../stores/auth'
 import { formatCost, formatDateTime } from '../../utils/format'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const activity = ref(null)
+const chatAccess = ref({
+  canAccess: false,
+  reason: '请先登录后进入活动群聊',
+  activityId: null,
+  activityTitle: ''
+})
 const fallback = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80'
 const avatarFallback = 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80'
 
@@ -67,8 +82,8 @@ const signupText = computed(() => {
 })
 
 const primaryDisabled = computed(() => ['APPROVED', 'PENDING', 'WAITING'].includes(activity.value?.signupStatus))
-
 const cancelText = computed(() => activity.value?.signupStatus === 'WAITING' ? '取消候补' : '退出')
+const chatButtonText = computed(() => chatAccess.value.canAccess ? '进入活动群聊' : '活动群聊暂不可进入')
 
 const mapLocationText = computed(() => {
   if (!activity.value?.longitude || !activity.value?.latitude) return '暂无经纬度'
@@ -77,6 +92,29 @@ const mapLocationText = computed(() => {
 
 async function load() {
   activity.value = await getActivity(route.params.id)
+  await loadChatAccess()
+}
+
+async function loadChatAccess() {
+  if (!auth.isLogin) {
+    chatAccess.value = {
+      canAccess: false,
+      reason: '请先登录后进入活动群聊',
+      activityId: activity.value?.id,
+      activityTitle: activity.value?.title || ''
+    }
+    return
+  }
+  try {
+    chatAccess.value = await checkChatAccess(activity.value.id)
+  } catch (error) {
+    chatAccess.value = {
+      canAccess: false,
+      reason: error.message || '暂时无法检查群聊权限',
+      activityId: activity.value?.id,
+      activityTitle: activity.value?.title || ''
+    }
+  }
 }
 
 async function doSignup() {
@@ -109,6 +147,14 @@ async function toggleFavorite() {
   }
   showSuccessToast('操作成功')
   await load()
+}
+
+function openChat() {
+  if (!chatAccess.value.canAccess) {
+    showToast(chatAccess.value.reason || '报名成功后才能进入活动群聊')
+    return
+  }
+  router.push(`/activities/${activity.value.id}/chat`)
 }
 
 function viewMap() {

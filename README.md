@@ -73,6 +73,12 @@ mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD < database\data.sql
 mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD < database\stage2.1-migration.sql
 ```
 
+Stage 2.2 在不重建数据库的前提下新增活动群聊字段，请继续执行增量迁移：
+
+```powershell
+mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD < database\stage2.2-migration.sql
+```
+
 如果不想使用 root，建议创建专用开发账号：
 
 ```sql
@@ -254,15 +260,62 @@ Bearer 登录返回的token
 - 个人中心系统通知基础列表与已读状态
 - 后台活动候补人数展示和报名状态筛选
 
-## 第二阶段 2.2 待开发功能
+## 第二阶段 2.2 已完成功能
 
-- WebSocket 活动群聊和实时通知
-- 完整信用分加减规则
-- 管理员人工调整信用分
+- WebSocket 活动群聊：`ws://127.0.0.1:5173/ws?token=<JWT>`，前端 dev server 通过 `/ws` 代理到后端。
+- 活动群聊权限：活动发起人和 `APPROVED` 报名用户可进入，未报名、待审核、候补、拒绝、退出用户不可进入。
+- 聊天记录 MySQL 持久化：`chat_message` 保存活动、发送人、昵称、头像、内容、类型和发送时间。
+- 群聊历史消息接口：`GET /api/activities/{activityId}/chat/messages`。
+- HTTP 兼容发消息接口：`POST /api/activities/{activityId}/chat/messages`。
+- 群聊权限检查接口：`GET /api/activities/{activityId}/chat/access`。
+- 系统通知 WebSocket 实时推送：候补转正等通知写入 MySQL 后会推送给在线用户。
+- 通知未读数量和已读状态强化：新增 `PUT /api/notices/read-all`，保留单条已读和未读数接口。
+
+WebSocket 聊天发送格式：
+
+```json
+{
+  "type": "CHAT",
+  "activityId": 1,
+  "content": "大家几点集合？"
+}
+```
+
+WebSocket 聊天广播格式：
+
+```json
+{
+  "type": "CHAT",
+  "activityId": 1,
+  "messageId": 100,
+  "senderId": 2,
+  "senderNickname": "user02",
+  "senderAvatar": "/uploads/avatar/user02.png",
+  "content": "大家几点集合？",
+  "createdAt": "2026-07-08 19:00:00"
+}
+```
+
+WebSocket 通知推送格式：
+
+```json
+{
+  "type": "NOTICE",
+  "noticeId": 1,
+  "noticeType": "WAITLIST_PROMOTED",
+  "title": "候补转正通知",
+  "content": "你候补的活动已转为报名成功",
+  "relatedId": 20,
+  "createdAt": "2026-07-08 19:00:00"
+}
+```
+
+## 第二阶段 2.3 待开发功能
+
 - AA 账单分摊与模拟支付确认
+- 完整信用分加减规则和管理员人工调整
+- 双向活动评价
 - 固定搭子申请与兴趣推荐
-- 系统通知已读未读
-- 双向评价
 - 举报处理完整流程
 - 推荐算法和热门活动排行
 

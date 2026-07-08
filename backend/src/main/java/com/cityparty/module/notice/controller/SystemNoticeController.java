@@ -35,6 +35,12 @@ public class SystemNoticeController {
         return Result.ok(noticeService.markRead(id));
     }
 
+    @Operation(summary = "全部通知标记为已读")
+    @PutMapping("/read-all")
+    public Result<Long> markAllRead() {
+        return Result.ok(noticeService.markAllRead());
+    }
+
     @Operation(summary = "我的未读通知数")
     @GetMapping("/unread-count")
     public Result<Long> unreadCount() {

@@ -1,10 +1,13 @@
 package com.cityparty.module.notice.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.websocket.WebSocketMessageType;
+import com.cityparty.common.websocket.WebSocketPushService;
 import com.cityparty.module.notice.entity.SystemNotice;
 import com.cityparty.module.notice.mapper.SystemNoticeMapper;
 import com.cityparty.module.notice.vo.SystemNoticeVO;
@@ -13,12 +16,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class SystemNoticeService {
 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private final SystemNoticeMapper noticeMapper;
+    private final WebSocketPushService webSocketPushService;
 
     public void createWaitlistPromotedNotice(Long userId, Long activityId, String activityTitle) {
         SystemNotice notice = new SystemNotice();
@@ -31,6 +40,7 @@ public class SystemNoticeService {
         notice.setCreatedAt(LocalDateTime.now());
         notice.setDeleted(0);
         noticeMapper.insert(notice);
+        webSocketPushService.pushNotice(userId, toWebSocketPayload(notice));
     }
 
     public PageResult<SystemNoticeVO> myNotices(long current, long size) {
@@ -55,6 +65,24 @@ public class SystemNoticeService {
         return toVO(notice);
     }
 
+    @Transactional(rollbackFor = Exception.class)
+    public Long markAllRead() {
+        Long userId = UserContext.getUserId();
+        Long unreadCount = noticeMapper.selectCount(new LambdaQueryWrapper<SystemNotice>()
+                .eq(SystemNotice::getUserId, userId)
+                .eq(SystemNotice::getReadFlag, 0)
+                .eq(SystemNotice::getDeleted, 0));
+        if (unreadCount == 0) {
+            return 0L;
+        }
+        noticeMapper.update(null, new UpdateWrapper<SystemNotice>()
+                .set("read_flag", 1)
+                .eq("user_id", userId)
+                .eq("read_flag", 0)
+                .eq("deleted", 0));
+        return unreadCount;
+    }
+
     public Long unreadCount() {
         return noticeMapper.selectCount(new LambdaQueryWrapper<SystemNotice>()
                 .eq(SystemNotice::getUserId, UserContext.getUserId())
@@ -73,5 +101,17 @@ public class SystemNoticeService {
         vo.setRead(Integer.valueOf(1).equals(notice.getReadFlag()));
         vo.setCreatedAt(notice.getCreatedAt());
         return vo;
+    }
+
+    private Map<String, Object> toWebSocketPayload(SystemNotice notice) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", WebSocketMessageType.NOTICE);
+        payload.put("noticeId", notice.getId());
+        payload.put("noticeType", notice.getType());
+        payload.put("title", notice.getTitle());
+        payload.put("content", notice.getContent());
+        payload.put("relatedId", notice.getRelatedId());
+        payload.put("createdAt", notice.getCreatedAt() == null ? null : notice.getCreatedAt().format(DATE_TIME_FORMATTER));
+        return payload;
     }
 }
