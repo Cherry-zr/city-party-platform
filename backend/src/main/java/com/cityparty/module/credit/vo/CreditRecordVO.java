@@ -14,5 +14,7 @@ public class CreditRecordVO {
     private String reason;
     private String sourceType;
     private Long sourceId;
+    private Long relatedActivityId;
+    private String relatedActivityTitle;
     private LocalDateTime createdAt;
 }

@@ -34,10 +34,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class ActivityService {
+
+    private static final Set<String> MY_ACTIVITY_TYPES = Set.of("published", "joined", "waiting", "finished");
 
     private final ActivityMapper activityMapper;
     private final ActivityTagMapper activityTagMapper;
@@ -152,11 +156,21 @@ public class ActivityService {
         return toVO(requireActivity(id));
     }
 
-    public PageResult<ActivityVO> myActivities(long current, long size) {
-        Page<Activity> page = activityMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<Activity>()
-                .eq(Activity::getCreatorId, UserContext.getUserId())
-                .eq(Activity::getDeleted, 0)
-                .orderByDesc(Activity::getCreatedAt));
+    public PageResult<ActivityVO> myActivities(String type, long current, long size) {
+        String normalizedType = StringUtils.hasText(type)
+                ? type.trim().toLowerCase(Locale.ROOT)
+                : "published";
+        if (!MY_ACTIVITY_TYPES.contains(normalizedType)) {
+            throw new BusinessException("type 仅支持 published、joined、waiting 或 finished");
+        }
+        long safeCurrent = Math.max(current, 1);
+        long safeSize = Math.min(Math.max(size, 1), 100);
+        Page<Activity> page = activityMapper.selectMyActivities(
+                new Page<>(safeCurrent, safeSize),
+                UserContext.getUserId(),
+                normalizedType,
+                LocalDateTime.now()
+        );
         return new PageResult<>(page.getRecords().stream().map(this::toVO).toList(), page.getTotal(), page.getCurrent(), page.getSize());
     }
 

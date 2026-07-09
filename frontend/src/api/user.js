@@ -4,6 +4,10 @@ export function getMe() {
   return request.get('/api/user/me')
 }
 
+export function getProfileOverview() {
+  return request.get('/api/user/profile-overview')
+}
+
 export function updateProfile(data) {
   return request.put('/api/user/profile', data)
 }

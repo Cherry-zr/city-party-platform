@@ -190,30 +190,27 @@ activity:waitlist:{activityId}
 1. 获取验证码：`GET /api/auth/captcha`
 2. 登录：`POST /api/auth/login`
 3. 当前用户：`GET /api/user/me`
-4. 修改资料：`PUT /api/user/profile`
-5. 发布活动：`POST /api/activities`
-6. 活动列表：`GET /api/activities`
-7. 活动详情：`GET /api/activities/{id}`
-8. 附近活动：`GET /api/activities/nearby`
-9. 报名活动：`POST /api/activities/{id}/signup`
-10. 退出报名：`POST /api/activities/{id}/signup/cancel`
-11. 加入候补：`POST /api/activities/{id}/waitlist`
-12. 取消候补：`POST /api/activities/{id}/waitlist/cancel`
-13. 查看候补列表：`GET /api/activities/{id}/waitlist`
-14. 审核报名：`POST /api/signups/{signupId}/review`
-15. 报名兼容接口：`POST /api/signups`，请求体传 `activityId`
-16. 审核通过兼容接口：`POST /api/signups/{signupId}/approve`
-17. 审核拒绝兼容接口：`POST /api/signups/{signupId}/reject`
-18. 收藏活动：`POST /api/activities/{id}/favorite`
-19. 收藏兼容接口：`POST /api/favorites/{activityId}`
-20. 我的收藏：`GET /api/favorites/my`
-21. 我的通知：`GET /api/notices/my`
-22. 标记通知已读：`PUT /api/notices/{id}/read`
-23. 未读通知数：`GET /api/notices/unread-count`
+4. 个人中心概览：`GET /api/user/profile-overview`
+5. 修改资料：`PUT /api/user/profile`
+6. 发布活动：`POST /api/activities`
+7. 活动列表：`GET /api/activities`
+8. 活动详情：`GET /api/activities/{id}`
+9. 我的活动分类：`GET /api/activities/my?type=published`
+10. 附近活动：`GET /api/activities/nearby`
+11. 报名活动：`POST /api/activities/{id}/signup`
+12. 退出报名：`POST /api/activities/{id}/signup/cancel`
+13. 加入候补：`POST /api/activities/{id}/waitlist`
+14. 取消候补：`POST /api/activities/{id}/waitlist/cancel`
+15. 查看候补列表：`GET /api/activities/{id}/waitlist`
+16. 审核报名：`POST /api/signups/{signupId}/review`
+17. 收藏活动：`POST /api/activities/{id}/favorite`
+18. 我的收藏：`GET /api/favorites/my`
+19. 我的通知：`GET /api/notices/my`
+20. 标记通知已读：`PUT /api/notices/{id}/read`
+21. 未读通知数：`GET /api/notices/unread-count`
+22. 信用中心概览：`GET /api/credit/overview`
+23. 我的评价：`GET /api/reviews/my?type=received`
 24. 后台看板：`GET /api/admin/dashboard`
-25. 后台用户：`GET /api/admin/users`
-26. 后台活动：`GET /api/admin/activities`
-27. 后台报名：`GET /api/admin/signups`
 
 请求需要在 `Authorization` 请求头携带：
 
@@ -333,6 +330,33 @@ mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD city_party_platform
 SOURCE database/stage2.3-migration.sql;
 DESC activity_review;
 DESC credit_record;
+```
+
+## 第二阶段 2.4 已完成功能
+
+- 个人中心集中展示基础资料、信用分、信用等级、活动统计、评价统计和实时未读通知数。
+- 信用等级分为：110–120 优秀、100–109 良好、80–99 正常、60–79 待提升。
+- “我的活动”支持我发布的、我参与的、候补中、已结束四类分页列表。
+- 已结束活动按 `endTime <= 当前时间` 判断，并限定为当前用户发布或已通过报名参与的活动。
+- “我的评价”继续复用 Stage 2.3 的发出/收到评价页面和接口。
+- 信用中心复用 `credit_record`，展示变化原因、前后分值、时间及可解析的关联活动。
+- 通知中心继续复用 `system_notice` 和 Stage 2.2 WebSocket `NOTICE`，支持单条已读和一键已读。
+- 移动端补齐加载、空状态、错误重试、未登录跳转和登录后站内回跳。
+
+Stage 2.4 数据库迁移只补充查询索引，不新增业务表或字段：
+
+```powershell
+cd D:\last_one-form-group\city-party-platform
+mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD city_party_platform
+```
+
+进入 MySQL 后执行：
+
+```sql
+SOURCE database/stage2.4-migration.sql;
+SHOW INDEX FROM activity_signup;
+SHOW INDEX FROM activity_waitlist;
+SHOW INDEX FROM system_notice;
 ```
 
 ## 后续待开发功能

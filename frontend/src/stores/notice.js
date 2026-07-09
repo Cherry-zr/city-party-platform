@@ -5,7 +5,8 @@ export const useNoticeStore = defineStore('notice', {
   state: () => ({
     unreadCount: 0,
     items: [],
-    loading: false
+    loading: false,
+    error: ''
   }),
   actions: {
     async loadUnreadCount() {
@@ -13,11 +14,15 @@ export const useNoticeStore = defineStore('notice', {
     },
     async loadNotices(params = { current: 1, size: 50 }) {
       this.loading = true
+      this.error = ''
       try {
         const data = await myNotices(params)
         this.items = data.records || []
         await this.loadUnreadCount()
         return data
+      } catch (error) {
+        this.error = error.message || '通知加载失败'
+        throw error
       } finally {
         this.loading = false
       }
@@ -47,8 +52,8 @@ export const useNoticeStore = defineStore('notice', {
       }
       if (!this.items.some((item) => item.id === notice.id)) {
         this.items.unshift(notice)
+        this.unreadCount += 1
       }
-      this.unreadCount += 1
     }
   }
 })

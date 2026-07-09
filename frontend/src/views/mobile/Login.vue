@@ -21,12 +21,13 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { showSuccessToast } from 'vant'
 import { getCaptcha } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 const loading = ref(false)
 const captcha = reactive({ captchaKey: '', captchaText: '' })
@@ -45,10 +46,27 @@ async function submit() {
   try {
     await auth.login(form)
     showSuccessToast('登录成功')
-    router.replace(auth.isAdmin ? '/admin/dashboard' : '/')
+    router.replace(resolveRedirect())
   } finally {
     loading.value = false
   }
+}
+
+function resolveRedirect() {
+  const redirect = route.query.redirect
+  if (auth.isAdmin) {
+    return isSafeRedirect(redirect)
+      ? redirect
+      : '/admin/dashboard'
+  }
+  if (!isSafeRedirect(redirect) || redirect.startsWith('/admin')) {
+    return '/'
+  }
+  return redirect
+}
+
+function isSafeRedirect(value) {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//')
 }
 
 onMounted(loadCaptcha)

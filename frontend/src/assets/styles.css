@@ -88,6 +88,14 @@ a {
   margin-bottom: 12px;
 }
 
+.page-state {
+  display: flex;
+  min-height: 180px;
+  align-items: center;
+  justify-content: center;
+  color: #697586;
+}
+
 .map-page {
   padding-bottom: 86px;
 }

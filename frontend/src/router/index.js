@@ -76,7 +76,7 @@ const router = createRouter({
 router.beforeEach((to) => {
   const auth = useAuthStore()
   if (!to.meta.public && !auth.isLogin) {
-    return '/login'
+    return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (to.meta.admin && !auth.isAdmin) {
     return '/'

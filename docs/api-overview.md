@@ -25,8 +25,19 @@ Authorization: Bearer <token>
 ## User
 
 - `GET /api/user/me`
+- `GET /api/user/profile-overview`
 - `PUT /api/user/profile`
 - `GET /api/users/{id}/public-profile`
+
+### Profile Overview
+
+`GET /api/user/profile-overview` 聚合当前登录用户的个人中心数据：
+
+- 基础资料、兴趣标签、当前信用分和信用等级。
+- 发布活动数、已通过报名参与活动数、候补中活动数。
+- 收到评价数、平均评分和未读通知数。
+
+无评价时 `averageRating` 返回 `null`。信用等级为：110–120 优秀、100–109 良好、80–99 正常、60–79 待提升。
 
 ## File
 
@@ -39,7 +50,7 @@ Authorization: Bearer <token>
 - `GET /api/activities`
 - `GET /api/activities/nearby`
 - `GET /api/activities/{id}`
-- `GET /api/activities/my`
+- `GET /api/activities/my?type=published`
 - `GET /api/activities/{id}/signups`
 - `POST /api/activities/{id}/waitlist`
 - `POST /api/activities/{id}/waitlist/cancel`
@@ -60,6 +71,15 @@ Authorization: Bearer <token>
 - `current`、`size`：分页参数。
 
 当经纬度存在时，后端使用 Haversine 公式计算 `distanceKm` 并按距离升序返回；经纬度为空时，按 `city` 降级查询。
+
+### My Activities
+
+`GET /api/activities/my` 支持 `current`、`size` 和以下 `type`：
+
+- `published`：我发布的活动，也是缺省值，兼容 Stage 2.3 以前的调用。
+- `joined`：报名状态为 `APPROVED`、`PROMOTED` 或 `COMPLETED` 的活动。
+- `waiting`：`activity_waitlist` 中当前状态为 `WAITING` 的活动。
+- `finished`：当前用户发布或已通过报名参与，并且 `endTime` 已到的活动。
 
 ### Waitlist
 
@@ -170,6 +190,7 @@ title = 你收到了一条活动评价
 ## Credit
 
 - `GET /api/credit/logs?current=1&size=20`：分页获取当前用户信用分变更记录。
+- `GET /api/credit/overview?current=1&size=20`：获取当前信用分、信用等级和分页变更记录。
 
 信用日志复用既有 `credit_record` 表。评价产生的记录使用：
 
@@ -177,6 +198,8 @@ title = 你收到了一条活动评价
 source_type = ACTIVITY_REVIEW
 source_id = activity_review.id
 ```
+
+对于 `ACTIVITY_REVIEW` 及兼容的旧 `REVIEW` 来源，响应会尽量补充 `relatedActivityId` 和 `relatedActivityTitle`。无法解析关联活动时，这两个字段为 `null`。
 
 ## WebSocket
 

@@ -6,6 +6,11 @@ import com.cityparty.common.exception.BusinessException;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.mapper.ActivityMapper;
 import com.cityparty.module.activity.service.ActivityService;
+import com.cityparty.module.credit.CreditLevelResolver;
+import com.cityparty.module.notice.entity.SystemNotice;
+import com.cityparty.module.notice.mapper.SystemNoticeMapper;
+import com.cityparty.module.review.entity.ActivityReview;
+import com.cityparty.module.review.mapper.ActivityReviewMapper;
 import com.cityparty.module.signup.entity.ActivitySignup;
 import com.cityparty.module.signup.mapper.ActivitySignupMapper;
 import com.cityparty.module.user.dto.UpdateProfileDTO;
@@ -17,8 +22,10 @@ import com.cityparty.module.user.mapper.InterestTagMapper;
 import com.cityparty.module.user.mapper.UserInterestMapper;
 import com.cityparty.module.user.mapper.UserMapper;
 import com.cityparty.module.user.mapper.UserProfileMapper;
+import com.cityparty.module.user.vo.ProfileOverviewVO;
 import com.cityparty.module.user.vo.PublicUserProfileVO;
 import com.cityparty.module.user.vo.UserMeVO;
+import com.cityparty.module.waitlist.mapper.ActivityWaitlistMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -26,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -40,6 +48,9 @@ public class UserService {
     private final UserInterestMapper userInterestMapper;
     private final ActivityMapper activityMapper;
     private final ActivitySignupMapper signupMapper;
+    private final ActivityWaitlistMapper waitlistMapper;
+    private final ActivityReviewMapper reviewMapper;
+    private final SystemNoticeMapper noticeMapper;
     @Lazy
     private final ActivityService activityService;
 
@@ -58,6 +69,35 @@ public class UserService {
         vo.setCity(profile == null ? null : profile.getCity());
         vo.setBio(profile == null ? null : profile.getBio());
         vo.setInterestTags(listInterestNames(userId));
+        return vo;
+    }
+
+    public ProfileOverviewVO profileOverview(Long userId) {
+        UserMeVO me = getMe(userId);
+        ProfileOverviewVO vo = new ProfileOverviewVO();
+        vo.setId(me.getId());
+        vo.setUsername(me.getUsername());
+        vo.setNickname(me.getNickname());
+        vo.setAvatarUrl(me.getAvatarUrl());
+        vo.setCity(me.getCity());
+        vo.setBio(me.getBio());
+        vo.setInterestTags(me.getInterestTags());
+        vo.setCreditScore(me.getCreditScore());
+        vo.setCreditLevel(CreditLevelResolver.resolve(me.getCreditScore()));
+        vo.setPublishedActivityCount(activityMapper.selectCount(new LambdaQueryWrapper<Activity>()
+                .eq(Activity::getCreatorId, userId)
+                .eq(Activity::getDeleted, 0)));
+        vo.setJoinedActivityCount(defaultCount(signupMapper.countJoinedActivities(userId)));
+        vo.setWaitingActivityCount(defaultCount(waitlistMapper.countWaitingActivities(userId)));
+        vo.setReceivedReviewCount(reviewMapper.selectCount(new LambdaQueryWrapper<ActivityReview>()
+                .eq(ActivityReview::getTargetUserId, userId)
+                .eq(ActivityReview::getDeleted, 0)));
+        var averageRating = reviewMapper.selectAverageRatingByTargetUserId(userId);
+        vo.setAverageRating(averageRating == null ? null : averageRating.setScale(1, RoundingMode.HALF_UP));
+        vo.setUnreadNoticeCount(noticeMapper.selectCount(new LambdaQueryWrapper<SystemNotice>()
+                .eq(SystemNotice::getUserId, userId)
+                .eq(SystemNotice::getReadFlag, 0)
+                .eq(SystemNotice::getDeleted, 0)));
         return vo;
     }
 
@@ -175,5 +215,9 @@ public class UserService {
             interest.setCreatedAt(LocalDateTime.now());
             userInterestMapper.insert(interest);
         }
+    }
+
+    private long defaultCount(Long count) {
+        return count == null ? 0L : count;
     }
 }

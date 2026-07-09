@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cityparty.module.activity.mapper.ActivityMapper">
+
+    <select id="selectMyActivities" resultType="com.cityparty.module.activity.entity.Activity">
+        SELECT a.*
+        FROM activity a
+        WHERE a.deleted = 0
+        <choose>
+            <when test="type == 'published'">
+                AND a.creator_id = #{userId}
+            </when>
+            <when test="type == 'joined'">
+                AND EXISTS (
+                    SELECT 1
+                    FROM activity_signup s
+                    WHERE s.activity_id = a.id
+                      AND s.user_id = #{userId}
+                      AND s.status IN ('APPROVED', 'PROMOTED', 'COMPLETED')
+                      AND s.deleted = 0
+                )
+            </when>
+            <when test="type == 'waiting'">
+                AND EXISTS (
+                    SELECT 1
+                    FROM activity_waitlist w
+                    WHERE w.activity_id = a.id
+                      AND w.user_id = #{userId}
+                      AND w.status = 'WAITING'
+                      AND w.deleted = 0
+                )
+            </when>
+            <when test="type == 'finished'">
+                AND a.end_time &lt;= #{now}
+                AND (
+                    a.creator_id = #{userId}
+                    OR EXISTS (
+                        SELECT 1
+                        FROM activity_signup s
+                        WHERE s.activity_id = a.id
+                          AND s.user_id = #{userId}
+                          AND s.status IN ('APPROVED', 'PROMOTED', 'COMPLETED')
+                          AND s.deleted = 0
+                    )
+                )
+            </when>
+        </choose>
+        ORDER BY a.created_at DESC
+    </select>
+</mapper>

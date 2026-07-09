@@ -25,7 +25,9 @@ let unsubscribeMessage = null
 function startRealtime() {
   if (!auth.token) return
   connectRealtime(auth.token)
-  notice.loadUnreadCount()
+  notice.loadUnreadCount().catch(() => {
+    // Individual pages expose retry controls when the API is unavailable.
+  })
 }
 
 onMounted(() => {

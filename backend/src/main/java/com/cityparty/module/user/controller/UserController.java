@@ -4,6 +4,7 @@ import com.cityparty.common.result.Result;
 import com.cityparty.common.security.UserContext;
 import com.cityparty.module.user.dto.UpdateProfileDTO;
 import com.cityparty.module.user.service.UserService;
+import com.cityparty.module.user.vo.ProfileOverviewVO;
 import com.cityparty.module.user.vo.PublicUserProfileVO;
 import com.cityparty.module.user.vo.UserMeVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,12 @@ public class UserController {
     @GetMapping("/user/me")
     public Result<UserMeVO> me() {
         return Result.ok(userService.getMe(UserContext.getUserId()));
+    }
+
+    @Operation(summary = "获取当前用户个人中心概览")
+    @GetMapping("/user/profile-overview")
+    public Result<ProfileOverviewVO> profileOverview() {
+        return Result.ok(userService.profileOverview(UserContext.getUserId()));
     }
 
     @Operation(summary = "修改当前用户资料")

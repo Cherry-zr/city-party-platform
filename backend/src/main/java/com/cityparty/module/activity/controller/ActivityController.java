@@ -72,9 +72,10 @@ public class ActivityController {
 
     @Operation(summary = "我的活动")
     @GetMapping("/my")
-    public Result<PageResult<ActivityVO>> myActivities(@RequestParam(defaultValue = "1") Long current,
+    public Result<PageResult<ActivityVO>> myActivities(@RequestParam(defaultValue = "published") String type,
+                                                       @RequestParam(defaultValue = "1") Long current,
                                                        @RequestParam(defaultValue = "10") Long size) {
-        return Result.ok(activityService.myActivities(current, size));
+        return Result.ok(activityService.myActivities(type, current, size));
     }
 
     @Operation(summary = "活动报名列表，发起人可查看")

@@ -122,7 +122,8 @@ CREATE TABLE activity_signup (
   deleted TINYINT NOT NULL DEFAULT 0,
   INDEX idx_signup_activity (activity_id),
   INDEX idx_signup_user (user_id),
-  INDEX idx_signup_status (status)
+  INDEX idx_signup_status (status),
+  INDEX idx_signup_user_status_activity (user_id, status, deleted, activity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity signup';
 
 CREATE TABLE activity_waitlist (
@@ -137,7 +138,8 @@ CREATE TABLE activity_waitlist (
   UNIQUE KEY uk_waitlist_activity_user (activity_id, user_id),
   INDEX idx_waitlist_activity_status (activity_id, status),
   INDEX idx_waitlist_user (user_id),
-  INDEX idx_waitlist_queue (activity_id, queue_no)
+  INDEX idx_waitlist_queue (activity_id, queue_no),
+  INDEX idx_waitlist_user_status_activity (user_id, status, deleted, activity_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity waitlist';
 
 CREATE TABLE activity_favorite (
@@ -255,5 +257,6 @@ CREATE TABLE system_notice (
   related_id BIGINT NULL,
   read_flag TINYINT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
-  deleted TINYINT NOT NULL DEFAULT 0
+  deleted TINYINT NOT NULL DEFAULT 0,
+  INDEX idx_notice_user_read_time (user_id, read_flag, deleted, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='system notice';
