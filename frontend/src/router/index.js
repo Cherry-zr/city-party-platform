@@ -24,7 +24,9 @@ import Dashboard from '../views/admin/Dashboard.vue'
 import UserManage from '../views/admin/UserManage.vue'
 import ActivityManage from '../views/admin/ActivityManage.vue'
 import SignupManage from '../views/admin/SignupManage.vue'
+import ReviewManage from '../views/admin/ReviewManage.vue'
 import CreditManage from '../views/admin/CreditManage.vue'
+import NoticeManage from '../views/admin/NoticeManage.vue'
 import ReportManage from '../views/admin/ReportManage.vue'
 
 const routes = [
@@ -62,7 +64,9 @@ const routes = [
       { path: 'users', component: UserManage },
       { path: 'activities', component: ActivityManage },
       { path: 'signups', component: SignupManage },
+      { path: 'reviews', component: ReviewManage },
       { path: 'credits', component: CreditManage },
+      { path: 'notices', component: NoticeManage },
       { path: 'reports', component: ReportManage }
     ]
   }

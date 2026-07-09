@@ -211,6 +211,9 @@ activity:waitlist:{activityId}
 22. 信用中心概览：`GET /api/credit/overview`
 23. 我的评价：`GET /api/reviews/my?type=received`
 24. 后台看板：`GET /api/admin/dashboard`
+25. 后台评价：`GET /api/admin/reviews`
+26. 后台信用记录：`GET /api/admin/credits`
+27. 后台通知记录：`GET /api/admin/notices`
 
 请求需要在 `Authorization` 请求头携带：
 
@@ -359,10 +362,31 @@ SHOW INDEX FROM activity_waitlist;
 SHOW INDEX FROM system_notice;
 ```
 
+## 第二阶段 2.5 已完成功能
+
+- 复用现有 `user.role` 字段识别管理员，角色值为 `ADMIN`。
+- `/api/admin/**` 由后端 JWT 拦截器统一校验；普通用户调用时返回业务响应码 `403`。
+- 个人中心仅对管理员显示“管理员后台”入口，后台页面路径为 `/admin/dashboard`。
+- 数据看板展示用户、活动、报名、评价和通知总数。
+- 用户管理支持账号、手机号和昵称搜索，并可查看基础资料、信用分及创建时间。
+- 活动管理支持关键词、分类和状态筛选，详情中可以查看报名及候补用户。
+- 报名、评价、信用记录和系统通知提供只读分页查询。
+- 不提供用户禁用、活动下架、数据删除、人工信用分调整或通知群发。
+- Stage 2.5 复用已有 `user`、`activity`、`activity_signup`、`activity_waitlist`、`activity_review`、`credit_record` 和 `system_notice`，不新增迁移脚本。
+
+Windows PowerShell 验收命令：
+
+```powershell
+Set-Location D:\last_one-form-group\city-party-platform\backend
+mvn test
+
+Set-Location D:\last_one-form-group\city-party-platform\frontend
+npm run build
+```
+
 ## 后续待开发功能
 
 - AA 账单分摊与模拟支付确认
-- 管理员信用分人工调整
 - 固定搭子申请与兴趣推荐
 - 举报处理完整流程
 - 推荐算法和热门活动排行

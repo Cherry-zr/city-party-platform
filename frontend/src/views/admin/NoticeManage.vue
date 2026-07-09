@@ -2,13 +2,13 @@
   <div>
     <div class="admin-page-heading">
       <div>
-        <h1>信用记录</h1>
-        <p>查看信用分变化明细，不提供人工修改或删除操作</p>
+        <h1>通知管理</h1>
+        <p>查看系统已产生的通知，不提供群发、删除或批量标记操作</p>
       </div>
     </div>
     <div class="admin-card">
       <el-form inline>
-        <el-form-item label="用户 ID">
+        <el-form-item label="接收用户 ID">
           <el-input-number v-model="query.userId" :min="1" :controls="false" placeholder="全部用户" />
         </el-form-item>
         <el-form-item>
@@ -16,25 +16,19 @@
           <el-button @click="reset">重置</el-button>
         </el-form-item>
       </el-form>
-      <el-table v-loading="loading" :data="rows" border empty-text="暂无信用记录">
+      <el-table v-loading="loading" :data="rows" border empty-text="暂无通知记录">
         <el-table-column prop="id" label="ID" width="76" />
         <el-table-column prop="userId" label="用户 ID" width="90" />
-        <el-table-column label="用户" min-width="140">
+        <el-table-column label="接收用户" min-width="140">
           <template #default="{ row }">{{ row.nickname || row.username }}（{{ row.username }}）</template>
         </el-table-column>
-        <el-table-column label="变化分值" width="90">
+        <el-table-column prop="type" label="类型" min-width="140" />
+        <el-table-column prop="title" label="标题" min-width="170" show-overflow-tooltip />
+        <el-table-column prop="content" label="内容" min-width="240" show-overflow-tooltip />
+        <el-table-column label="状态" width="90">
           <template #default="{ row }">
-            <span :class="row.changeScore > 0 ? 'positive-score' : row.changeScore < 0 ? 'negative-score' : ''">
-              {{ formatDelta(row.changeScore) }}
-            </span>
+            <el-tag :type="row.read ? 'info' : 'warning'">{{ row.read ? '已读' : '未读' }}</el-tag>
           </template>
-        </el-table-column>
-        <el-table-column label="分数区间" width="110">
-          <template #default="{ row }">{{ row.beforeScore }} → {{ row.afterScore }}</template>
-        </el-table-column>
-        <el-table-column prop="reason" label="变化原因" min-width="180" show-overflow-tooltip />
-        <el-table-column label="关联活动" min-width="170" show-overflow-tooltip>
-          <template #default="{ row }">{{ row.activityTitle || '-' }}</template>
         </el-table-column>
         <el-table-column label="创建时间" min-width="150">
           <template #default="{ row }">{{ formatDateTime(row.createdAt) }}</template>
@@ -54,7 +48,7 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { adminCredits } from '../../api/admin'
+import { adminNotices } from '../../api/admin'
 import { formatDateTime } from '../../utils/format'
 
 const query = reactive({ userId: undefined, current: 1, size: 10 })
@@ -65,7 +59,7 @@ const loading = ref(false)
 async function load() {
   loading.value = true
   try {
-    const data = await adminCredits(query)
+    const data = await adminNotices(query)
     rows.value = data.records || []
     total.value = data.total || 0
   } finally {
@@ -81,11 +75,6 @@ function search() {
 function reset() {
   Object.assign(query, { userId: undefined, current: 1 })
   load()
-}
-
-function formatDelta(value) {
-  if (!value) return '0'
-  return value > 0 ? `+${value}` : value
 }
 
 onMounted(load)

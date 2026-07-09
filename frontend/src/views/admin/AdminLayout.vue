@@ -8,15 +8,16 @@
           <el-menu-item index="/admin/users">用户管理</el-menu-item>
           <el-menu-item index="/admin/activities">活动管理</el-menu-item>
           <el-menu-item index="/admin/signups">报名管理</el-menu-item>
-          <el-menu-item index="/admin/credits">信用分管理</el-menu-item>
-          <el-menu-item index="/admin/reports">举报管理</el-menu-item>
+          <el-menu-item index="/admin/reviews">评价管理</el-menu-item>
+          <el-menu-item index="/admin/credits">信用记录</el-menu-item>
+          <el-menu-item index="/admin/notices">通知管理</el-menu-item>
         </el-menu>
       </aside>
       <main class="admin-main">
         <header class="admin-topbar">
           <strong>同城活动发现与陌生人组局平台</strong>
           <el-space>
-            <span>{{ auth.user?.nickname }}</span>
+            <span>{{ auth.user?.nickname || auth.user?.username }}</span>
             <el-button size="small" @click="$router.push('/')">用户端</el-button>
             <el-button size="small" type="danger" plain @click="logout">退出</el-button>
           </el-space>

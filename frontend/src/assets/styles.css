@@ -282,4 +282,110 @@ a {
   border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 16px;
+  overflow: hidden;
+}
+
+.admin-page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.admin-page-heading h1 {
+  margin: 0;
+  color: #1f2933;
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+.admin-page-heading p {
+  margin: 5px 0 0;
+  color: #667085;
+  font-size: 14px;
+}
+
+.dashboard-card {
+  min-height: 116px;
+  margin-bottom: 16px;
+}
+
+.dashboard-label {
+  color: #667085;
+  font-size: 14px;
+}
+
+.dashboard-value {
+  margin-top: 10px;
+  color: #1f2933;
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.admin-pagination {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+.admin-detail-tabs {
+  margin-top: 20px;
+}
+
+.positive-score {
+  color: #16803c;
+  font-weight: 700;
+}
+
+.negative-score {
+  color: #c0362c;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .admin-shell {
+    display: block;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+  }
+
+  .admin-brand {
+    height: 48px;
+  }
+
+  .admin-sidebar .el-menu {
+    display: flex;
+    overflow-x: auto;
+    border-right: none;
+  }
+
+  .admin-sidebar .el-menu-item {
+    flex: none;
+  }
+
+  .admin-topbar {
+    height: auto;
+    min-height: 56px;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .admin-topbar > strong {
+    font-size: 14px;
+  }
+
+  .admin-content {
+    padding: 12px;
+  }
+
+  .admin-page-heading {
+    display: block;
+  }
+
+  .admin-page-heading > .el-button {
+    margin-top: 10px;
+  }
 }

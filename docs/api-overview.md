@@ -280,14 +280,34 @@ ws://127.0.0.1:5173/ws?token=<JWT>
 
 ## Admin
 
-管理员接口要求登录用户角色为 `ADMIN`。
+管理员接口要求登录用户角色为 `ADMIN`。JWT 解析后的角色由后端拦截器校验，普通用户即使直接请求 `/api/admin/**` 也会收到：
 
-- `GET /api/admin/dashboard`
-- `GET /api/admin/users`
-- `GET /api/admin/activities`
-- `GET /api/admin/signups`，支持 `status` 筛选，例如 `WAITING`、`PROMOTED`、`APPROVED`
-- `GET /api/admin/credits`
-- `GET /api/admin/reports`
+```json
+{
+  "code": 403,
+  "message": "无管理员权限",
+  "data": null
+}
+```
+
+Stage 2.5 管理接口：
+
+- `GET /api/admin/dashboard`：用户、活动、报名、评价、通知总数。
+- `GET /api/admin/users?keyword=&current=1&size=10`：用户列表，关键词匹配账号、手机号或昵称。
+- `GET /api/admin/users/{id}`：用户基础资料与信用分详情。
+- `GET /api/admin/activities?keyword=&category=&status=&current=1&size=10`：活动列表和状态筛选。
+- `GET /api/admin/activities/{id}`：活动详情。
+- `GET /api/admin/activities/{id}/signups?current=1&size=20`：指定活动的报名用户。
+- `GET /api/admin/activities/{id}/waitlist?current=1&size=20`：指定活动的候补用户。
+- `GET /api/admin/signups?activityId=&status=&current=1&size=10`：全局报名记录，保留已有兼容接口。
+- `GET /api/admin/reviews?activityId=&userId=&current=1&size=10`：评价记录；`userId` 同时匹配评价人和被评价人。
+- `GET /api/admin/credits?userId=&current=1&size=10`：信用变化明细及可解析的关联活动。
+- `GET /api/admin/notices?userId=&current=1&size=10`：系统通知与接收用户。
+- `GET /api/admin/reports?current=1&size=10`：保留第一阶段兼容接口，本阶段不扩展处理流程。
+
+所有分页接口都会将 `current` 的最小值限制为 `1`，将 `size` 限制在 `1` 到 `100`。Stage 2.5 仅提供查询能力，不提供删除、禁用、下架、队列调整、信用分修改或通知群发。
+
+数据库继续使用已有 `user.role` 和业务表，不需要执行 `database/stage2.5-migration.sql`。
 
 ## AMap Config
 

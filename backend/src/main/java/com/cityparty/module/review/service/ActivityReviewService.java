@@ -171,6 +171,21 @@ public class ActivityReviewService {
         return toPageResult(reviewMapper.selectPage(page(current, size), wrapper));
     }
 
+    public PageResult<ActivityReviewVO> adminPage(Long activityId, Long userId, long current, long size) {
+        LambdaQueryWrapper<ActivityReview> wrapper = new LambdaQueryWrapper<ActivityReview>()
+                .eq(ActivityReview::getDeleted, 0)
+                .orderByDesc(ActivityReview::getCreatedAt);
+        if (activityId != null) {
+            wrapper.eq(ActivityReview::getActivityId, activityId);
+        }
+        if (userId != null) {
+            wrapper.and(w -> w.eq(ActivityReview::getReviewerId, userId)
+                    .or()
+                    .eq(ActivityReview::getTargetUserId, userId));
+        }
+        return toPageResult(reviewMapper.selectPage(page(current, size), wrapper));
+    }
+
     private Page<ActivityReview> page(long current, long size) {
         return new Page<>(Math.max(current, 1), Math.min(Math.max(size, 1), 100));
     }
