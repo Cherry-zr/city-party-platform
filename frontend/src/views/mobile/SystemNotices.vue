@@ -4,7 +4,7 @@
     <van-empty v-if="!notice.loading && notice.items.length === 0" description="暂无系统通知" />
     <div v-for="item in notice.items" :key="item.id" class="plain-panel notice-item" @click="read(item)">
       <van-space align="start" fill>
-        <div style="flex: 1">
+        <div style="flex: 1; min-width: 0">
           <div class="activity-title">{{ item.title }}</div>
           <div class="activity-meta">{{ item.content }}</div>
           <div class="activity-meta">{{ formatDateTime(item.createdAt) }}</div>
@@ -40,3 +40,9 @@ onMounted(() => {
   notice.loadNotices({ current: 1, size: 50 })
 })
 </script>
+
+<style scoped>
+.notice-item .activity-meta {
+  overflow-wrap: anywhere;
+}
+</style>

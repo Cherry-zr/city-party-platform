@@ -16,6 +16,9 @@ import UserProfile from '../views/mobile/UserProfile.vue'
 import ActivityMap from '../views/mobile/ActivityMap.vue'
 import Partner from '../views/mobile/Partner.vue'
 import SystemNotices from '../views/mobile/SystemNotices.vue'
+import ActivityReviews from '../views/mobile/ActivityReviews.vue'
+import MyReviews from '../views/mobile/MyReviews.vue'
+import CreditLogs from '../views/mobile/CreditLogs.vue'
 import AdminLayout from '../views/admin/AdminLayout.vue'
 import Dashboard from '../views/admin/Dashboard.vue'
 import UserManage from '../views/admin/UserManage.vue'
@@ -34,6 +37,7 @@ const routes = [
       { path: '', component: Home, meta: { public: true } },
       { path: 'activities/:id', component: ActivityDetail, meta: { public: true } },
       { path: 'activities/:id/chat', component: ActivityChat },
+      { path: 'activities/:id/reviews', component: ActivityReviews },
       { path: 'publish', component: PublishActivity },
       { path: 'my-activities', component: MyActivities },
       { path: 'my-signups', component: MySignups },
@@ -43,6 +47,8 @@ const routes = [
       { path: 'users/:id', component: UserProfile },
       { path: 'map', component: ActivityMap },
       { path: 'notices', component: SystemNotices },
+      { path: 'reviews/my', component: MyReviews },
+      { path: 'credit/logs', component: CreditLogs },
       { path: 'partner', component: Partner }
     ]
   },

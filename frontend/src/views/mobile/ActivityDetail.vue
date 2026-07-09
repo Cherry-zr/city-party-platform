@@ -36,6 +36,12 @@
       </van-button>
       <div v-if="!chatAccess.canAccess" class="activity-meta chat-access-reason">{{ chatAccess.reason }}</div>
     </div>
+    <div v-if="canReview" class="plain-panel">
+      <van-button block plain type="primary" @click="router.push(`/activities/${activity.id}/reviews`)">
+        评价成员
+      </van-button>
+      <div class="activity-meta review-entry-tip">活动已结束，可以查看并评价本次活动成员。</div>
+    </div>
     <van-space fill>
       <van-button block type="primary" :disabled="primaryDisabled" @click="doSignup">
         {{ signupText }}
@@ -84,6 +90,13 @@ const signupText = computed(() => {
 const primaryDisabled = computed(() => ['APPROVED', 'PENDING', 'WAITING'].includes(activity.value?.signupStatus))
 const cancelText = computed(() => activity.value?.signupStatus === 'WAITING' ? '取消候补' : '退出')
 const chatButtonText = computed(() => chatAccess.value.canAccess ? '进入活动群聊' : '活动群聊暂不可进入')
+const canReview = computed(() => {
+  if (!activity.value?.endTime || !auth.user?.id) return false
+  const ended = new Date(activity.value.endTime).getTime() <= Date.now()
+  const isCreator = String(activity.value.creatorId) === String(auth.user.id)
+  const isApprovedMember = activity.value.signupStatus === 'APPROVED'
+  return ended && (isCreator || isApprovedMember)
+})
 
 const mapLocationText = computed(() => {
   if (!activity.value?.longitude || !activity.value?.latitude) return '暂无经纬度'
@@ -183,3 +196,9 @@ function statusText(status) {
 
 onMounted(load)
 </script>
+
+<style scoped>
+.review-entry-tip {
+  margin-top: 8px;
+}
+</style>

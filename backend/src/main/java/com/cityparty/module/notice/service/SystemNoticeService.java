@@ -14,6 +14,8 @@ import com.cityparty.module.notice.vo.SystemNoticeVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -41,6 +43,25 @@ public class SystemNoticeService {
         notice.setDeleted(0);
         noticeMapper.insert(notice);
         webSocketPushService.pushNotice(userId, toWebSocketPayload(notice));
+    }
+
+    public void createActivityReviewNotice(Long userId,
+                                           Long activityId,
+                                           String activityTitle,
+                                           Integer rating,
+                                           Integer creditDelta) {
+        SystemNotice notice = new SystemNotice();
+        notice.setUserId(userId);
+        notice.setType("ACTIVITY_REVIEW");
+        notice.setTitle("你收到了一条活动评价");
+        notice.setContent("你在活动《" + activityTitle + "》中收到 " + rating
+                + " 分评价，信用分变化 " + formatCreditDelta(creditDelta));
+        notice.setRelatedId(activityId);
+        notice.setReadFlag(0);
+        notice.setCreatedAt(LocalDateTime.now());
+        notice.setDeleted(0);
+        noticeMapper.insert(notice);
+        pushNoticeAfterCommit(userId, notice);
     }
 
     public PageResult<SystemNoticeVO> myNotices(long current, long size) {
@@ -113,5 +134,25 @@ public class SystemNoticeService {
         payload.put("relatedId", notice.getRelatedId());
         payload.put("createdAt", notice.getCreatedAt() == null ? null : notice.getCreatedAt().format(DATE_TIME_FORMATTER));
         return payload;
+    }
+
+    private void pushNoticeAfterCommit(Long userId, SystemNotice notice) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            webSocketPushService.pushNotice(userId, toWebSocketPayload(notice));
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                webSocketPushService.pushNotice(userId, toWebSocketPayload(notice));
+            }
+        });
+    }
+
+    private String formatCreditDelta(Integer creditDelta) {
+        if (creditDelta == null || creditDelta == 0) {
+            return "0";
+        }
+        return creditDelta > 0 ? "+" + creditDelta : creditDelta.toString();
     }
 }

@@ -16,7 +16,8 @@
       <van-cell title="我的报名" is-link to="/my-signups" />
       <van-cell title="我的收藏" is-link to="/my-favorites" />
       <van-cell title="我的搭子" value="开发中" is-link to="/partner" />
-      <van-cell title="我的评价" value="第二阶段" />
+      <van-cell title="我的评价" is-link to="/reviews/my" />
+      <van-cell title="信用分明细" :value="String(auth.user?.creditScore ?? '--')" is-link to="/credit/logs" />
       <van-cell title="AA账单" value="第二阶段" />
       <van-cell title="系统通知" :value="noticeValue" is-link to="/notices" />
       <van-cell v-if="auth.isAdmin" title="管理员后台" is-link to="/admin/dashboard" />

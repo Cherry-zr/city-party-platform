@@ -127,6 +127,57 @@ title = 候补转正通知
 
 Stage 2.2 会在通知写入 MySQL 后通过 WebSocket 向在线用户实时推送。
 
+评价成功后会生成评价通知：
+
+```text
+type = ACTIVITY_REVIEW
+title = 你收到了一条活动评价
+```
+
+## Activity Review
+
+- `GET /api/activities/{activityId}/reviews/targets`：获取当前用户可评价的活动成员。
+- `POST /api/activities/{activityId}/reviews`：提交评价。
+- `GET /api/activities/{activityId}/reviews?current=1&size=20`：分页获取活动评价。
+- `GET /api/reviews/my?type=sent&current=1&size=20`：获取我发出的评价。
+- `GET /api/reviews/my?type=received&current=1&size=20`：获取我收到的评价。
+
+查看和提交评价的用户必须是活动发起人或 `APPROVED` 报名成员，并且活动的 `endTime` 已到。被评价人也必须是同一活动成员，不能评价自己或重复评价同一成员。
+
+提交请求：
+
+```json
+{
+  "targetUserId": 3,
+  "rating": 5,
+  "content": "准时到场，沟通顺畅",
+  "tags": ["准时", "友好", "好沟通"]
+}
+```
+
+评分对应的信用分变化：
+
+| 评分 | 原始变化 |
+|---|---:|
+| 5 | +2 |
+| 4 | +1 |
+| 3 | 0 |
+| 2 | -2 |
+| 1 | -4 |
+
+信用分最终限制在 60–120，评价和信用日志记录的是边界处理后的实际变化值。
+
+## Credit
+
+- `GET /api/credit/logs?current=1&size=20`：分页获取当前用户信用分变更记录。
+
+信用日志复用既有 `credit_record` 表。评价产生的记录使用：
+
+```text
+source_type = ACTIVITY_REVIEW
+source_id = activity_review.id
+```
+
 ## WebSocket
 
 开发环境连接地址：

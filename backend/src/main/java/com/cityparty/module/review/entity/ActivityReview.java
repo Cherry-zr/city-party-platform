@@ -12,12 +12,11 @@ public class ActivityReview {
     private Long id;
     private Long activityId;
     private Long reviewerId;
-    private Long reviewedUserId;
-    private Integer punctualityScore;
-    private Integer communicationScore;
-    private Integer authenticityScore;
-    private Integer overallScore;
+    private Long targetUserId;
+    private Integer rating;
     private String content;
+    private String tags;
+    private Integer creditDelta;
     private LocalDateTime createdAt;
     private Integer deleted;
 }

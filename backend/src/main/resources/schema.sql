@@ -168,7 +168,10 @@ CREATE TABLE credit_record (
   reason VARCHAR(255) NOT NULL,
   source_type VARCHAR(50) NULL,
   source_id BIGINT NULL,
-  created_at DATETIME NOT NULL
+  created_at DATETIME NOT NULL,
+  deleted TINYINT NOT NULL DEFAULT 0,
+  INDEX idx_credit_user_time (user_id, created_at),
+  INDEX idx_credit_source (source_type, source_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='credit record';
 
 CREATE TABLE partner_request (
@@ -217,14 +220,17 @@ CREATE TABLE activity_review (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   activity_id BIGINT NOT NULL,
   reviewer_id BIGINT NOT NULL,
-  reviewed_user_id BIGINT NOT NULL,
-  punctuality_score INT NOT NULL,
-  communication_score INT NOT NULL,
-  authenticity_score INT NOT NULL,
-  overall_score INT NOT NULL,
+  target_user_id BIGINT NOT NULL,
+  rating INT NOT NULL,
   content VARCHAR(500) NULL,
+  tags VARCHAR(255) NULL,
+  credit_delta INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL,
-  deleted TINYINT NOT NULL DEFAULT 0
+  deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_review_activity_reviewer_target (activity_id, reviewer_id, target_user_id),
+  INDEX idx_review_activity_time (activity_id, created_at),
+  INDEX idx_review_reviewer_time (reviewer_id, created_at),
+  INDEX idx_review_target_time (target_user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity review';
 
 CREATE TABLE report (

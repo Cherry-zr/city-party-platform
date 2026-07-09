@@ -310,11 +310,35 @@ WebSocket 通知推送格式：
 }
 ```
 
-## 第二阶段 2.3 待开发功能
+## 第二阶段 2.3 已完成功能
+
+- 活动结束后，活动发起人和 `APPROVED` 报名成员可以互相评价。
+- 单次评价包含 1–5 分、最多 500 字评价内容和最多 5 个标签。
+- 同一活动、评价人、被评价人只能生成一条评价，前后端校验与数据库唯一约束共同防重。
+- 信用分规则：5 分 `+2`、4 分 `+1`、3 分 `0`、2 分 `-2`、1 分 `-4`，最终分数限制在 60–120。
+- 评价、信用分更新、`credit_record` 日志和系统通知在同一事务中完成。
+- 评价通知使用 `ACTIVITY_REVIEW` 类型，并复用 Stage 2.2 WebSocket `NOTICE` 实时推送。
+- 新增活动评价、我的评价、信用分明细三个移动端页面。
+
+Stage 2.3 数据库迁移：
+
+```powershell
+cd D:\last_one-form-group\city-party-platform
+mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD city_party_platform
+```
+
+进入 MySQL 后执行：
+
+```sql
+SOURCE database/stage2.3-migration.sql;
+DESC activity_review;
+DESC credit_record;
+```
+
+## 后续待开发功能
 
 - AA 账单分摊与模拟支付确认
-- 完整信用分加减规则和管理员人工调整
-- 双向活动评价
+- 管理员信用分人工调整
 - 固定搭子申请与兴趣推荐
 - 举报处理完整流程
 - 推荐算法和热门活动排行

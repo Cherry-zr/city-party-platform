@@ -1,22 +1,18 @@
-package com.cityparty.module.credit.entity;
+package com.cityparty.module.credit.vo;
 
-import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-@TableName("credit_record")
-public class CreditRecord {
+public class CreditRecordVO {
 
     private Long id;
-    private Long userId;
-    private Integer changeScore;
+    private Integer changeValue;
     private Integer beforeScore;
     private Integer afterScore;
     private String reason;
     private String sourceType;
     private Long sourceId;
     private LocalDateTime createdAt;
-    private Integer deleted;
 }
