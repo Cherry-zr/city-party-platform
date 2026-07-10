@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.mapper.ActivityMapper;
 import com.cityparty.module.activity.service.ActivityService;
@@ -69,8 +70,9 @@ public class SignupService {
             signupMapper.updateById(signup);
         }
         if ("APPROVED".equals(nextStatus)) {
-            activity.setApprovedCount(activity.getApprovedCount() + 1);
-            activityService.refreshStatusAfterCountChange(activity);
+            if (!activityService.increaseApprovedCountIfAvailable(activityId)) {
+                throw new BusinessException(409, "Activity is full. Please join the waitlist.");
+            }
         }
         return toVO(signup);
     }
@@ -97,8 +99,7 @@ public class SignupService {
         signup.setUpdatedAt(LocalDateTime.now());
         signupMapper.updateById(signup);
         if ("APPROVED".equals(oldStatus) && activity.getApprovedCount() > 0) {
-            activity.setApprovedCount(activity.getApprovedCount() - 1);
-            activityService.refreshStatusAfterCountChange(activity);
+            activityService.decreaseApprovedCount(activityId);
             waitlistService.promoteNextIfAvailable(activityId);
         }
         return toVO(signup);
@@ -128,14 +129,15 @@ public class SignupService {
         signup.setUpdatedAt(LocalDateTime.now());
         signupMapper.updateById(signup);
         if ("APPROVED".equals(status)) {
-            activity.setApprovedCount(activity.getApprovedCount() + 1);
-            activityService.refreshStatusAfterCountChange(activity);
+            if (!activityService.increaseApprovedCountIfAvailable(activity.getId())) {
+                throw new BusinessException(409, "Activity is full.");
+            }
         }
         return toVO(signup);
     }
 
     public PageResult<SignupVO> mySignups(long current, long size) {
-        Page<ActivitySignup> page = signupMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<ActivitySignup>()
+        Page<ActivitySignup> page = signupMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<ActivitySignup>()
                 .eq(ActivitySignup::getUserId, UserContext.getUserId())
                 .eq(ActivitySignup::getDeleted, 0)
                 .orderByDesc(ActivitySignup::getCreatedAt));
@@ -147,7 +149,7 @@ public class SignupService {
         if (!activity.getCreatorId().equals(UserContext.getUserId()) && !UserContext.isAdmin()) {
             throw new BusinessException(403, "无权查看该活动报名");
         }
-        Page<ActivitySignup> page = signupMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<ActivitySignup>()
+        Page<ActivitySignup> page = signupMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<ActivitySignup>()
                 .eq(ActivitySignup::getActivityId, activityId)
                 .eq(ActivitySignup::getDeleted, 0)
                 .orderByDesc(ActivitySignup::getCreatedAt));

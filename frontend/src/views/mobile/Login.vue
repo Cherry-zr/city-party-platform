@@ -5,7 +5,7 @@
       <div class="plain-panel">
         <van-form @submit="submit">
           <van-field v-model="form.username" name="username" label="账号" placeholder="admin / user01" required />
-          <van-field v-model="form.password" name="password" label="密码" type="password" placeholder="123456" required />
+          <van-field v-model="form.password" name="password" label="密码" type="password" placeholder="请输入密码" required />
           <van-field v-model="form.captchaCode" name="captchaCode" label="验证码" placeholder="请输入验证码" required>
             <template #button>
               <van-button size="small" type="primary" plain @click.prevent="loadCaptcha">{{ captcha.captchaText || '获取' }}</van-button>
@@ -31,14 +31,14 @@ const route = useRoute()
 const auth = useAuthStore()
 const loading = ref(false)
 const captcha = reactive({ captchaKey: '', captchaText: '' })
-const form = reactive({ username: 'user01', password: '123456', captchaKey: '', captchaCode: '' })
+const form = reactive({ username: '', password: '', captchaKey: '', captchaCode: '' })
 
 async function loadCaptcha() {
   const data = await getCaptcha()
   captcha.captchaKey = data.captchaKey
   captcha.captchaText = data.captchaText
   form.captchaKey = data.captchaKey
-  form.captchaCode = data.captchaText
+  form.captchaCode = ''
 }
 
 async function submit() {

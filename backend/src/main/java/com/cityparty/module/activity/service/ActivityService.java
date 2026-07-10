@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.module.activity.dto.ActivityCreateDTO;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.entity.ActivityTag;
@@ -42,6 +43,8 @@ import java.util.Set;
 public class ActivityService {
 
     private static final Set<String> MY_ACTIVITY_TYPES = Set.of("published", "joined", "waiting", "finished");
+    private static final BigDecimal DEFAULT_NEARBY_DISTANCE_KM = BigDecimal.valueOf(5);
+    private static final BigDecimal MAX_NEARBY_DISTANCE_KM = BigDecimal.valueOf(100);
 
     private final ActivityMapper activityMapper;
     private final ActivityTagMapper activityTagMapper;
@@ -108,7 +111,7 @@ public class ActivityService {
         if (StringUtils.hasText(status)) {
             wrapper.eq(Activity::getStatus, status);
         }
-        Page<Activity> page = activityMapper.selectPage(new Page<>(current, size), wrapper);
+        Page<Activity> page = activityMapper.selectPage(PageUtils.page(current, size), wrapper);
         return new PageResult<>(page.getRecords().stream().map(this::toVO).toList(), page.getTotal(), page.getCurrent(), page.getSize());
     }
 
@@ -120,14 +123,17 @@ public class ActivityService {
                                          String city,
                                          long current,
                                          long size) {
-        BigDecimal maxDistance = distanceKm == null ? BigDecimal.valueOf(5) : distanceKm;
+        long safeCurrent = PageUtils.safeCurrent(current);
+        long safeSize = PageUtils.safeSize(size);
+        BigDecimal maxDistance = normalizeDistance(distanceKm);
         if (longitude == null || latitude == null) {
-            return page(null, category, tag, city, null, current, size);
+            return page(null, category, tag, city, null, safeCurrent, safeSize);
         }
         LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getDeleted, 0)
                 .isNotNull(Activity::getLongitude)
                 .isNotNull(Activity::getLatitude);
+        applyBoundingBox(wrapper, longitude, latitude, maxDistance);
         if (StringUtils.hasText(category)) {
             wrapper.eq(Activity::getCategory, category);
         }
@@ -146,14 +152,87 @@ public class ActivityService {
                 .filter(vo -> vo.getDistanceKm() != null && vo.getDistanceKm().compareTo(maxDistance) <= 0)
                 .sorted(Comparator.comparing(ActivityVO::getDistanceKm))
                 .toList();
-        long from = Math.max((current - 1) * size, 0);
-        long to = Math.min(from + size, sorted.size());
+        long from = Math.max((safeCurrent - 1) * safeSize, 0);
+        long to = Math.min(from + safeSize, sorted.size());
         List<ActivityVO> records = from >= sorted.size() ? Collections.emptyList() : sorted.subList((int) from, (int) to);
-        return new PageResult<>(records, (long) sorted.size(), current, size);
+        return new PageResult<>(records, (long) sorted.size(), safeCurrent, safeSize);
     }
 
     public ActivityVO detail(Long id) {
         return toVO(requireActivity(id));
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ActivityVO update(Long id, ActivityCreateDTO dto) {
+        Activity activity = requireActivity(id);
+        ensureCanManage(activity);
+        if ("CANCELLED".equals(activity.getStatus()) || "FINISHED".equals(activity.getStatus())) {
+            throw new BusinessException("Activity cannot be edited after cancel or finish.");
+        }
+        if (dto.getMaxParticipants() < dto.getMinParticipants()) {
+            throw new BusinessException("Max participants cannot be less than min participants.");
+        }
+        if (dto.getMaxParticipants() < activity.getApprovedCount()) {
+            throw new BusinessException("Max participants cannot be less than approved count.");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        activity.setTitle(dto.getTitle());
+        activity.setCategory(dto.getCategory());
+        activity.setTags(joinTags(dto.getTags()));
+        activity.setStartTime(dto.getStartTime());
+        activity.setEndTime(dto.getEndTime());
+        activity.setSignupDeadline(dto.getSignupDeadline());
+        activity.setCity(dto.getCity());
+        activity.setAddress(dto.getAddress());
+        activity.setLongitude(dto.getLongitude());
+        activity.setLatitude(dto.getLatitude());
+        activity.setMinParticipants(dto.getMinParticipants());
+        activity.setMaxParticipants(dto.getMaxParticipants());
+        activity.setCostType(dto.getCostType());
+        activity.setCostAmount(dto.getCostAmount());
+        activity.setAaRule(dto.getAaRule());
+        activity.setCoverUrl(dto.getCoverUrl());
+        activity.setDescription(dto.getDescription());
+        activity.setNotes(dto.getNotes());
+        activity.setNeedApproval(Boolean.TRUE.equals(dto.getNeedApproval()) ? 1 : 0);
+        activity.setUpdatedAt(now);
+        activityMapper.updateById(activity);
+        activityTagMapper.delete(new LambdaQueryWrapper<ActivityTag>().eq(ActivityTag::getActivityId, id));
+        saveTags(id, dto.getTags());
+        activityMapper.refreshJoinableStatus(id, now);
+        return detail(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ActivityVO cancel(Long id) {
+        Activity activity = requireActivity(id);
+        ensureCanManage(activity);
+        if ("FINISHED".equals(activity.getStatus())) {
+            throw new BusinessException("Finished activity cannot be cancelled.");
+        }
+        if (!"CANCELLED".equals(activity.getStatus())) {
+            activity.setStatus("CANCELLED");
+            activity.setUpdatedAt(LocalDateTime.now());
+            activityMapper.updateById(activity);
+        }
+        return detail(id);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public ActivityVO finish(Long id) {
+        Activity activity = requireActivity(id);
+        ensureCanManage(activity);
+        if ("CANCELLED".equals(activity.getStatus())) {
+            throw new BusinessException("Cancelled activity cannot be finished.");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        activity.setStatus("FINISHED");
+        if (activity.getEndTime() == null || activity.getEndTime().isAfter(now)) {
+            activity.setEndTime(now);
+        }
+        activity.setUpdatedAt(now);
+        activityMapper.updateById(activity);
+        return detail(id);
     }
 
     public PageResult<ActivityVO> myActivities(String type, long current, long size) {
@@ -163,10 +242,8 @@ public class ActivityService {
         if (!MY_ACTIVITY_TYPES.contains(normalizedType)) {
             throw new BusinessException("type 仅支持 published、joined、waiting 或 finished");
         }
-        long safeCurrent = Math.max(current, 1);
-        long safeSize = Math.min(Math.max(size, 1), 100);
         Page<Activity> page = activityMapper.selectMyActivities(
-                new Page<>(safeCurrent, safeSize),
+                PageUtils.page(current, size),
                 UserContext.getUserId(),
                 normalizedType,
                 LocalDateTime.now()
@@ -246,13 +323,25 @@ public class ActivityService {
     }
 
     public void refreshStatusAfterCountChange(Activity activity) {
-        if (activity.getApprovedCount() >= activity.getMaxParticipants()) {
-            activity.setStatus("FULL");
-        } else if ("FULL".equals(activity.getStatus())) {
-            activity.setStatus("SIGNING");
+        if (activity == null || activity.getId() == null) {
+            return;
         }
-        activity.setUpdatedAt(LocalDateTime.now());
-        activityMapper.updateById(activity);
+        activityMapper.refreshJoinableStatus(activity.getId(), LocalDateTime.now());
+    }
+
+    public boolean increaseApprovedCountIfAvailable(Long activityId) {
+        return activityMapper.increaseApprovedCountIfAvailable(activityId, LocalDateTime.now()) > 0;
+    }
+
+    public void decreaseApprovedCount(Long activityId) {
+        activityMapper.decreaseApprovedCount(activityId, LocalDateTime.now());
+    }
+
+    private void ensureCanManage(Activity activity) {
+        Long userId = UserContext.getUserId();
+        if (!activity.getCreatorId().equals(userId) && !UserContext.isAdmin()) {
+            throw new BusinessException(403, "No permission to manage this activity.");
+        }
     }
 
     private CreatorVO buildCreator(Long creatorId) {
@@ -298,6 +387,29 @@ public class ActivityService {
             return Collections.emptyList();
         }
         return Arrays.stream(tags.split(",")).filter(StringUtils::hasText).toList();
+    }
+
+    private BigDecimal normalizeDistance(BigDecimal distanceKm) {
+        if (distanceKm == null || distanceKm.compareTo(BigDecimal.ZERO) <= 0) {
+            return DEFAULT_NEARBY_DISTANCE_KM;
+        }
+        return distanceKm.min(MAX_NEARBY_DISTANCE_KM);
+    }
+
+    private void applyBoundingBox(LambdaQueryWrapper<Activity> wrapper,
+                                  BigDecimal longitude,
+                                  BigDecimal latitude,
+                                  BigDecimal distanceKm) {
+        double radiusKm = distanceKm.doubleValue();
+        double latDelta = radiusKm / 111.32D;
+        double lngBase = Math.cos(Math.toRadians(latitude.doubleValue())) * 111.32D;
+        double lngDelta = radiusKm / Math.max(Math.abs(lngBase), 0.01D);
+        wrapper.between(Activity::getLatitude,
+                        latitude.subtract(BigDecimal.valueOf(latDelta)),
+                        latitude.add(BigDecimal.valueOf(latDelta)))
+                .between(Activity::getLongitude,
+                        longitude.subtract(BigDecimal.valueOf(lngDelta)),
+                        longitude.add(BigDecimal.valueOf(lngDelta)));
     }
 
     private BigDecimal calculateDistanceKm(BigDecimal latitude,

@@ -193,27 +193,30 @@ activity:waitlist:{activityId}
 4. 个人中心概览：`GET /api/user/profile-overview`
 5. 修改资料：`PUT /api/user/profile`
 6. 发布活动：`POST /api/activities`
-7. 活动列表：`GET /api/activities`
-8. 活动详情：`GET /api/activities/{id}`
-9. 我的活动分类：`GET /api/activities/my?type=published`
-10. 附近活动：`GET /api/activities/nearby`
-11. 报名活动：`POST /api/activities/{id}/signup`
-12. 退出报名：`POST /api/activities/{id}/signup/cancel`
-13. 加入候补：`POST /api/activities/{id}/waitlist`
-14. 取消候补：`POST /api/activities/{id}/waitlist/cancel`
-15. 查看候补列表：`GET /api/activities/{id}/waitlist`
-16. 审核报名：`POST /api/signups/{signupId}/review`
-17. 收藏活动：`POST /api/activities/{id}/favorite`
-18. 我的收藏：`GET /api/favorites/my`
-19. 我的通知：`GET /api/notices/my`
-20. 标记通知已读：`PUT /api/notices/{id}/read`
-21. 未读通知数：`GET /api/notices/unread-count`
-22. 信用中心概览：`GET /api/credit/overview`
-23. 我的评价：`GET /api/reviews/my?type=received`
-24. 后台看板：`GET /api/admin/dashboard`
-25. 后台评价：`GET /api/admin/reviews`
-26. 后台信用记录：`GET /api/admin/credits`
-27. 后台通知记录：`GET /api/admin/notices`
+7. 编辑活动：`PUT /api/activities/{id}`
+8. 取消活动：`PATCH /api/activities/{id}/cancel`
+9. 结束活动：`PATCH /api/activities/{id}/finish`
+10. 活动列表：`GET /api/activities`
+11. 活动详情：`GET /api/activities/{id}`
+12. 我的活动分类：`GET /api/activities/my?type=published`
+13. 附近活动：`GET /api/activities/nearby`
+14. 报名活动：`POST /api/activities/{id}/signup`
+15. 退出报名：`POST /api/activities/{id}/signup/cancel`
+16. 加入候补：`POST /api/activities/{id}/waitlist`
+17. 取消候补：`POST /api/activities/{id}/waitlist/cancel`
+18. 查看候补列表：`GET /api/activities/{id}/waitlist`
+19. 审核报名：`POST /api/signups/{signupId}/review`
+20. 收藏活动：`POST /api/activities/{id}/favorite`
+21. 我的收藏：`GET /api/favorites/my`
+22. 我的通知：`GET /api/notices/my`
+23. 标记通知已读：`PUT /api/notices/{id}/read`
+24. 未读通知数：`GET /api/notices/unread-count`
+25. 信用中心概览：`GET /api/credit/overview`
+26. 我的评价：`GET /api/reviews/my?type=received`
+27. 后台看板：`GET /api/admin/dashboard`
+28. 后台评价：`GET /api/admin/reviews`
+29. 后台信用记录：`GET /api/admin/credits`
+30. 后台通知记录：`GET /api/admin/notices`
 
 请求需要在 `Authorization` 请求头携带：
 
@@ -383,6 +386,34 @@ mvn test
 Set-Location D:\last_one-form-group\city-party-platform\frontend
 npm run build
 ```
+
+## 第二阶段 2.6 已完成功能
+
+- 完整建库脚本已同步 `chat_message` 的昵称、头像、消息类型字段和聊天查询索引。
+- 新增 `database/stage2.6-migration.sql`，给 `activity_signup` 增加 `activity_id + user_id` 唯一约束，防止并发重复报名。
+- 报名、审核通过和候补转正改为数据库条件更新活动人数，降低并发超员风险。
+- 用户侧分页统一限制 `current >= 1`、`size <= 100`，附近活动查询增加经纬度边界框预过滤。
+- 活动发起人或管理员可以编辑、取消、结束活动；移动端详情页和发布页已支持对应操作。
+- JWT 拦截器和 WebSocket 握手会复核数据库中的用户状态和角色，避免旧 token 继续使用旧权限。
+- 新注册密码使用 PBKDF2 哈希，兼容旧 SHA-256 哈希；上传图片增加文件头校验。
+- CORS 和 WebSocket Origin 支持通过 `CORS_ALLOWED_ORIGIN_PATTERNS` 环境变量配置。
+- 登录/注册页不再默认填入演示密码，也不再自动填入验证码。
+
+Stage 2.6 数据库迁移：
+
+```powershell
+cd D:\last_one-form-group\city-party-platform
+mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD city_party_platform
+```
+
+进入 MySQL 后执行：
+
+```sql
+SOURCE database/stage2.6-migration.sql;
+SHOW INDEX FROM activity_signup;
+```
+
+如果旧库中已经存在同一活动、同一用户的重复报名记录，新增唯一约束前需要先人工清理重复数据。
 
 ## 后续待开发功能
 

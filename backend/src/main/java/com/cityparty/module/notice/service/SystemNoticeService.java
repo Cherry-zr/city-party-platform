@@ -2,10 +2,10 @@ package com.cityparty.module.notice.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.common.websocket.WebSocketMessageType;
 import com.cityparty.common.websocket.WebSocketPushService;
 import com.cityparty.module.notice.entity.SystemNotice;
@@ -65,7 +65,7 @@ public class SystemNoticeService {
     }
 
     public PageResult<SystemNoticeVO> myNotices(long current, long size) {
-        Page<SystemNotice> page = noticeMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<SystemNotice>()
+        var page = noticeMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<SystemNotice>()
                 .eq(SystemNotice::getUserId, UserContext.getUserId())
                 .eq(SystemNotice::getDeleted, 0)
                 .orderByDesc(SystemNotice::getCreatedAt));

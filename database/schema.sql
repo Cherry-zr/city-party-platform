@@ -120,6 +120,7 @@ CREATE TABLE activity_signup (
   created_at DATETIME NOT NULL,
   updated_at DATETIME NOT NULL,
   deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_signup_activity_user (activity_id, user_id),
   INDEX idx_signup_activity (activity_id),
   INDEX idx_signup_user (user_id),
   INDEX idx_signup_status (status),
@@ -156,9 +157,14 @@ CREATE TABLE chat_message (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   activity_id BIGINT NOT NULL,
   sender_id BIGINT NOT NULL,
+  sender_nickname VARCHAR(80) NULL,
+  sender_avatar VARCHAR(500) NULL,
   content VARCHAR(1000) NOT NULL,
+  message_type VARCHAR(20) NOT NULL DEFAULT 'TEXT',
   created_at DATETIME NOT NULL,
-  deleted TINYINT NOT NULL DEFAULT 0
+  deleted TINYINT NOT NULL DEFAULT 0,
+  INDEX idx_chat_activity_time (activity_id, created_at),
+  INDEX idx_chat_sender (sender_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='chat message';
 
 CREATE TABLE credit_record (

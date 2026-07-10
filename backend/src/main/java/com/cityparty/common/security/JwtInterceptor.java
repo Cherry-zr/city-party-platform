@@ -1,6 +1,8 @@
 package com.cityparty.common.security;
 
 import com.cityparty.common.exception.BusinessException;
+import com.cityparty.module.user.entity.User;
+import com.cityparty.module.user.mapper.UserMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
@@ -14,9 +16,11 @@ public class JwtInterceptor implements HandlerInterceptor {
     private static final Pattern PUBLIC_ACTIVITY_DETAIL_PATH = Pattern.compile("^/api/activities/\\d+/?$");
 
     private final JwtUtils jwtUtils;
+    private final UserMapper userMapper;
 
-    public JwtInterceptor(JwtUtils jwtUtils) {
+    public JwtInterceptor(JwtUtils jwtUtils, UserMapper userMapper) {
         this.jwtUtils = jwtUtils;
+        this.userMapper = userMapper;
     }
 
     @Override
@@ -35,7 +39,7 @@ public class JwtInterceptor implements HandlerInterceptor {
         if (token == null || token.isBlank()) {
             throw new BusinessException(401, "请先登录");
         }
-        LoginUser loginUser = jwtUtils.parseToken(token);
+        LoginUser loginUser = refreshLoginUser(jwtUtils.parseToken(token));
         UserContext.set(loginUser);
         if (request.getRequestURI().startsWith("/api/admin") && !"ADMIN".equals(loginUser.getRole())) {
             throw new BusinessException(403, "无管理员权限");
@@ -52,6 +56,14 @@ public class JwtInterceptor implements HandlerInterceptor {
             return true;
         }
         return PUBLIC_ACTIVITY_DETAIL_PATH.matcher(uri).matches();
+    }
+
+    private LoginUser refreshLoginUser(LoginUser tokenUser) {
+        User user = userMapper.selectById(tokenUser.getUserId());
+        if (user == null || Integer.valueOf(1).equals(user.getDeleted()) || !"NORMAL".equals(user.getStatus())) {
+            throw new BusinessException(401, "User is disabled or does not exist.");
+        }
+        return new LoginUser(user.getId(), user.getUsername(), user.getRole());
     }
 
     @Override

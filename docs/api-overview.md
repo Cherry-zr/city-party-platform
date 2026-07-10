@@ -47,6 +47,9 @@ Authorization: Bearer <token>
 ## Activity
 
 - `POST /api/activities`
+- `PUT /api/activities/{id}`
+- `PATCH /api/activities/{id}/cancel`
+- `PATCH /api/activities/{id}/finish`
 - `GET /api/activities`
 - `GET /api/activities/nearby`
 - `GET /api/activities/{id}`
@@ -70,7 +73,15 @@ Authorization: Bearer <token>
 - `category`、`tag`、`city`：可选筛选条件。
 - `current`、`size`：分页参数。
 
-当经纬度存在时，后端使用 Haversine 公式计算 `distanceKm` 并按距离升序返回；经纬度为空时，按 `city` 降级查询。
+当经纬度存在时，后端先按经纬度边界框做数据库预过滤，再使用 Haversine 公式计算 `distanceKm` 并按距离升序返回；经纬度为空时，按 `city` 降级查询。`distanceKm` 最大按 100 公里处理。
+
+### Activity Lifecycle
+
+- `PUT /api/activities/{id}`：活动发起人或管理员编辑活动，使用与发布活动一致的请求体。
+- `PATCH /api/activities/{id}/cancel`：活动发起人或管理员取消活动，取消后不能继续报名。
+- `PATCH /api/activities/{id}/finish`：活动发起人或管理员结束活动，若结束时间晚于当前时间，会更新为当前时间。
+
+编辑活动时，`maxParticipants` 不能小于当前已通过报名人数。已取消或已结束活动不能继续编辑。
 
 ### My Activities
 
@@ -130,6 +141,7 @@ HTTP 发送请求体：
 - `WAITING`：候补中。
 - `PROMOTED` 或 `APPROVED`：报名成功。
 - 用户退出 `APPROVED` 报名后，系统会自动尝试转正第一位候补用户。
+- Stage 2.6 起，活动人数通过数据库条件更新占位，并建议执行 `database/stage2.6-migration.sql` 增加同一用户同一活动的唯一约束。
 
 ## Notice
 
@@ -308,6 +320,15 @@ Stage 2.5 管理接口：
 所有分页接口都会将 `current` 的最小值限制为 `1`，将 `size` 限制在 `1` 到 `100`。Stage 2.5 仅提供查询能力，不提供删除、禁用、下架、队列调整、信用分修改或通知群发。
 
 数据库继续使用已有 `user.role` 和业务表，不需要执行 `database/stage2.5-migration.sql`。
+
+## Stage 2.6 Hardening
+
+- `database/schema.sql` 和 `backend/src/main/resources/schema.sql` 已同步 Stage 2.2 聊天字段和索引。
+- `database/stage2.6-migration.sql` 新增 `activity_signup(activity_id, user_id)` 唯一约束。
+- 所有主要分页入口将 `current` 限制为至少 `1`，`size` 限制为最多 `100`。
+- JWT HTTP 拦截器和 WebSocket 握手会复核数据库用户状态和角色。
+- 新注册密码使用 PBKDF2，旧 SHA-256 哈希仍可登录；上传图片会校验文件头。
+- CORS 和 WebSocket Origin 可通过 `CORS_ALLOWED_ORIGIN_PATTERNS` 配置。
 
 ## AMap Config
 

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.mapper.ActivityMapper;
 import com.cityparty.module.credit.entity.CreditRecord;
@@ -187,7 +188,7 @@ public class ActivityReviewService {
     }
 
     private Page<ActivityReview> page(long current, long size) {
-        return new Page<>(Math.max(current, 1), Math.min(Math.max(size, 1), 100));
+        return PageUtils.page(current, size);
     }
 
     private PageResult<ActivityReviewVO> toPageResult(Page<ActivityReview> page) {

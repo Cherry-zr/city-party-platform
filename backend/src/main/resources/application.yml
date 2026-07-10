@@ -41,6 +41,8 @@ springdoc:
     path: /v3/api-docs
 
 city-party:
+  cors:
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:*}
   jwt:
     secret: ${JWT_SECRET:city-party-local-development-secret-change-me}
     expire-minutes: ${JWT_EXPIRE_MINUTES:4320}

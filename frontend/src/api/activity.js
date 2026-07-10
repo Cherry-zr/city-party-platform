@@ -16,6 +16,18 @@ export function createActivity(data) {
   return request.post('/api/activities', data)
 }
 
+export function updateActivity(id, data) {
+  return request.put(`/api/activities/${id}`, data)
+}
+
+export function cancelActivity(id) {
+  return request.patch(`/api/activities/${id}/cancel`)
+}
+
+export function finishActivity(id) {
+  return request.patch(`/api/activities/${id}/finish`)
+}
+
 export function myActivities(params) {
   return request.get('/api/activities/my', { params })
 }

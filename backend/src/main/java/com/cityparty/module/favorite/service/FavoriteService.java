@@ -1,10 +1,10 @@
 package com.cityparty.module.favorite.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.mapper.ActivityMapper;
 import com.cityparty.module.activity.service.ActivityService;
@@ -72,7 +72,7 @@ public class FavoriteService {
     }
 
     public PageResult<FavoriteVO> myFavorites(long current, long size) {
-        Page<ActivityFavorite> page = favoriteMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<ActivityFavorite>()
+        var page = favoriteMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<ActivityFavorite>()
                 .eq(ActivityFavorite::getUserId, UserContext.getUserId())
                 .eq(ActivityFavorite::getDeleted, 0)
                 .orderByDesc(ActivityFavorite::getCreatedAt));

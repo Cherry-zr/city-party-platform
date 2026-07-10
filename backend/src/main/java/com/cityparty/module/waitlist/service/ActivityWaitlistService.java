@@ -1,10 +1,11 @@
 package com.cityparty.module.waitlist.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.mapper.ActivityMapper;
 import com.cityparty.module.activity.service.ActivityService;
@@ -139,7 +140,7 @@ public class ActivityWaitlistService {
         if (!activity.getCreatorId().equals(UserContext.getUserId()) && !UserContext.isAdmin()) {
             throw new BusinessException(403, "无权查看该活动候补列表");
         }
-        Page<ActivityWaitlist> page = waitlistMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<ActivityWaitlist>()
+        var page = waitlistMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<ActivityWaitlist>()
                 .eq(ActivityWaitlist::getActivityId, activityId)
                 .eq(ActivityWaitlist::getDeleted, 0)
                 .orderByAsc(ActivityWaitlist::getQueueNo)
@@ -161,8 +162,21 @@ public class ActivityWaitlistService {
             activityService.refreshStatusAfterCountChange(activity);
             return;
         }
+        if (!activityService.increaseApprovedCountIfAvailable(activityId)) {
+            return;
+        }
         ActivitySignup signup = latestSignup(activityId, waitlist.getUserId());
         LocalDateTime now = LocalDateTime.now();
+        int promotedRows = waitlistMapper.update(null, new LambdaUpdateWrapper<ActivityWaitlist>()
+                .set(ActivityWaitlist::getStatus, "PROMOTED")
+                .set(ActivityWaitlist::getUpdatedAt, now)
+                .eq(ActivityWaitlist::getId, waitlist.getId())
+                .eq(ActivityWaitlist::getStatus, "WAITING")
+                .eq(ActivityWaitlist::getDeleted, 0));
+        if (promotedRows == 0) {
+            activityService.decreaseApprovedCount(activityId);
+            return;
+        }
         if (signup == null) {
             signup = new ActivitySignup();
             signup.setActivityId(activityId);
@@ -180,13 +194,8 @@ public class ActivityWaitlistService {
             signupMapper.updateById(signup);
         }
 
-        waitlist.setStatus("PROMOTED");
-        waitlist.setUpdatedAt(now);
-        waitlistMapper.updateById(waitlist);
-
-        activity.setApprovedCount(activity.getApprovedCount() + 1);
-        activityService.refreshStatusAfterCountChange(activity);
-        noticeService.createWaitlistPromotedNotice(waitlist.getUserId(), activityId, activity.getTitle());
+        Activity latestActivity = activityService.requireActivity(activityId);
+        noticeService.createWaitlistPromotedNotice(waitlist.getUserId(), activityId, latestActivity.getTitle());
     }
 
     private ActivityWaitlist nextWaitingFromRedis(Long activityId) {

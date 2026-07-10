@@ -2,6 +2,7 @@ package com.cityparty.common.config;
 
 import com.cityparty.common.security.JwtInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -17,11 +18,14 @@ public class WebConfig implements WebMvcConfigurer {
     private final JwtInterceptor jwtInterceptor;
     private final UploadProperties uploadProperties;
 
+    @Value("${city-party.cors.allowed-origin-patterns:*}")
+    private String[] allowedOriginPatterns;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOriginPatterns("*")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedOriginPatterns(allowedOriginPatterns)
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(3600);

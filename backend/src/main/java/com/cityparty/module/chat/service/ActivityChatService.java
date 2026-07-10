@@ -1,10 +1,10 @@
 package com.cityparty.module.chat.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.mapper.ActivityMapper;
 import com.cityparty.module.chat.dto.ChatMessageCreateDTO;
@@ -77,7 +77,7 @@ public class ActivityChatService {
 
     public PageResult<ChatMessageVO> messages(Long activityId, long current, long size) {
         ensureAccess(activityId, UserContext.getUserId());
-        Page<ChatMessage> page = chatMessageMapper.selectPage(new Page<>(current, size), new LambdaQueryWrapper<ChatMessage>()
+        var page = chatMessageMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getActivityId, activityId)
                 .eq(ChatMessage::getDeleted, 0)
                 .orderByDesc(ChatMessage::getCreatedAt)

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.security.UserContext;
+import com.cityparty.common.utils.PageUtils;
 import com.cityparty.module.activity.entity.Activity;
 import com.cityparty.module.activity.mapper.ActivityMapper;
 import com.cityparty.module.credit.CreditLevelResolver;
@@ -52,10 +53,8 @@ public class CreditService {
     }
 
     public PageResult<CreditRecordVO> myLogs(long current, long size) {
-        long safeCurrent = Math.max(current, 1);
-        long safeSize = Math.min(Math.max(size, 1), 100);
         Page<CreditRecord> page = creditRecordMapper.selectPage(
-                new Page<>(safeCurrent, safeSize),
+                PageUtils.page(current, size),
                 new LambdaQueryWrapper<CreditRecord>()
                         .eq(CreditRecord::getUserId, UserContext.getUserId())
                         .eq(CreditRecord::getDeleted, 0)

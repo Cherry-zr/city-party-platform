@@ -1,5 +1,5 @@
 <template>
-  <van-nav-bar title="发布活动" />
+  <van-nav-bar :title="isEdit ? '编辑活动' : '发布活动'" />
   <div class="mobile-content">
     <van-form @submit="submit">
       <div class="plain-panel">
@@ -31,7 +31,9 @@
           </template>
         </van-cell>
       </div>
-      <van-button block type="primary" native-type="submit" :loading="loading">发布</van-button>
+      <van-button block type="primary" native-type="submit" :loading="loading">
+        {{ isEdit ? '保存修改' : '发布' }}
+      </van-button>
     </van-form>
     <van-action-sheet v-model:show="showCategory" :actions="categories.map(name => ({ name }))" @select="selectCategory" />
     <van-action-sheet v-model:show="showCost" :actions="costs" @select="selectCost" />
@@ -47,13 +49,14 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { showSuccessToast } from 'vant'
-import { createActivity } from '../../api/activity'
+import { createActivity, getActivity, updateActivity } from '../../api/activity'
 import AmapLocationPicker from '../../components/AmapLocationPicker.vue'
 
 const router = useRouter()
+const route = useRoute()
 const loading = ref(false)
 const showCategory = ref(false)
 const showCost = ref(false)
@@ -87,6 +90,9 @@ const form = reactive({
   needApproval: false
 })
 
+const editId = computed(() => route.query.editId)
+const isEdit = computed(() => Boolean(editId.value))
+
 const locationSummary = computed(() => {
   if (!form.longitude || !form.latitude) return '未选择坐标'
   return `${form.longitude}, ${form.latitude}`
@@ -112,11 +118,45 @@ function selectLocation(location) {
 async function submit() {
   loading.value = true
   try {
-    const data = await createActivity({ ...form, tags: tagText.value.split(',').map((item) => item.trim()).filter(Boolean) })
-    showSuccessToast('发布成功')
+    const payload = { ...form, tags: tagText.value.split(',').map((item) => item.trim()).filter(Boolean) }
+    const data = isEdit.value ? await updateActivity(editId.value, payload) : await createActivity(payload)
+    showSuccessToast(isEdit.value ? '修改成功' : '发布成功')
     router.push(`/activities/${data.id}`)
   } finally {
     loading.value = false
   }
 }
+
+async function loadForEdit() {
+  if (!isEdit.value) return
+  loading.value = true
+  try {
+    const data = await getActivity(editId.value)
+    Object.assign(form, {
+      title: data.title || '',
+      category: data.category || '',
+      startTime: data.startTime || '',
+      endTime: data.endTime || '',
+      signupDeadline: data.signupDeadline || '',
+      city: data.city || '',
+      address: data.address || '',
+      longitude: data.longitude,
+      latitude: data.latitude,
+      minParticipants: data.minParticipants,
+      maxParticipants: data.maxParticipants,
+      costType: data.costType || data.feeType || 'AA',
+      costAmount: data.costAmount ?? data.feeAmount ?? 0,
+      aaRule: data.aaRule || '',
+      coverUrl: data.coverUrl || '',
+      description: data.description || '',
+      notes: data.notes || '',
+      needApproval: Boolean(data.needApproval)
+    })
+    tagText.value = (data.tags || []).join(',')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadForEdit)
 </script>

@@ -30,6 +30,7 @@ public class FileUploadUtils {
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
             throw new BusinessException("仅支持 JPG、PNG、WebP 图片");
         }
+        validateImageContent(file, extension);
         try {
             Path dir = Path.of(uploadProperties.getBaseDir(), bizDir).toAbsolutePath().normalize();
             Files.createDirectories(dir);
@@ -47,5 +48,56 @@ public class FileUploadUtils {
             throw new BusinessException("文件名缺少扩展名");
         }
         return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+    }
+
+    private void validateImageContent(MultipartFile file, String extension) {
+        try {
+            byte[] header = file.getInputStream().readNBytes(12);
+            boolean valid = switch (extension) {
+                case "jpg", "jpeg" -> isJpeg(header);
+                case "png" -> isPng(header);
+                case "webp" -> isWebp(header);
+                default -> false;
+            };
+            if (!valid) {
+                throw new BusinessException("Invalid image content.");
+            }
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("Invalid image content.");
+        }
+    }
+
+    private boolean isJpeg(byte[] header) {
+        return header.length >= 3
+                && (header[0] & 0xFF) == 0xFF
+                && (header[1] & 0xFF) == 0xD8
+                && (header[2] & 0xFF) == 0xFF;
+    }
+
+    private boolean isPng(byte[] header) {
+        byte[] signature = new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+        if (header.length < signature.length) {
+            return false;
+        }
+        for (int i = 0; i < signature.length; i++) {
+            if (header[i] != signature[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean isWebp(byte[] header) {
+        return header.length >= 12
+                && header[0] == 'R'
+                && header[1] == 'I'
+                && header[2] == 'F'
+                && header[3] == 'F'
+                && header[8] == 'W'
+                && header[9] == 'E'
+                && header[10] == 'B'
+                && header[11] == 'P';
     }
 }

@@ -32,14 +32,14 @@ const router = useRouter()
 const auth = useAuthStore()
 const loading = ref(false)
 const captcha = reactive({ captchaKey: '', captchaText: '' })
-const form = reactive({ username: '', password: '123456', nickname: '', phone: '', city: '北京', captchaKey: '', captchaCode: '' })
+const form = reactive({ username: '', password: '', nickname: '', phone: '', city: '北京', captchaKey: '', captchaCode: '' })
 
 async function loadCaptcha() {
   const data = await getCaptcha()
   captcha.captchaKey = data.captchaKey
   captcha.captchaText = data.captchaText
   form.captchaKey = data.captchaKey
-  form.captchaCode = data.captchaText
+  form.captchaCode = ''
 }
 
 async function submit() {

@@ -11,6 +11,7 @@
       <p>{{ activity.description }}</p>
       <van-cell title="时间" :value="`${formatDateTime(activity.startTime)} - ${formatDateTime(activity.endTime)}`" />
       <van-cell title="地点" :label="activity.address" :value="activity.city" />
+      <van-cell title="活动状态" :value="activityStatusText(activity.status)" />
       <van-cell title="地图位置" :label="mapLocationText">
         <template #right-icon>
           <van-button v-if="activity.longitude && activity.latitude" size="small" plain type="primary" @click.stop="viewMap">查看地图</van-button>
@@ -42,6 +43,13 @@
       </van-button>
       <div class="activity-meta review-entry-tip">活动已结束，可以查看并评价本次活动成员。</div>
     </div>
+    <div v-if="isCreator" class="plain-panel">
+      <van-space fill>
+        <van-button block plain type="primary" :loading="actionLoading" @click="editActivity">编辑活动</van-button>
+        <van-button block plain type="warning" :loading="actionLoading" :disabled="!canFinishActivity" @click="finishCurrentActivity">结束活动</van-button>
+        <van-button block plain type="danger" :loading="actionLoading" :disabled="!canCancelActivity" @click="cancelCurrentActivity">取消活动</van-button>
+      </van-space>
+    </div>
     <van-space fill>
       <van-button block type="primary" :disabled="primaryDisabled" @click="doSignup">
         {{ signupText }}
@@ -57,8 +65,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showSuccessToast, showToast } from 'vant'
-import { cancelWaitlist, getActivity, joinWaitlist } from '../../api/activity'
+import { showConfirmDialog, showSuccessToast, showToast } from 'vant'
+import { cancelActivity, cancelWaitlist, finishActivity, getActivity, joinWaitlist } from '../../api/activity'
 import { checkChatAccess } from '../../api/chat'
 import { signupActivity, cancelSignup } from '../../api/signup'
 import { favoriteActivity, unfavoriteActivity } from '../../api/favorite'
@@ -69,6 +77,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
 const activity = ref(null)
+const actionLoading = ref(false)
 const chatAccess = ref({
   canAccess: false,
   reason: '请先登录后进入活动群聊',
@@ -80,6 +89,7 @@ const avatarFallback = 'https://images.unsplash.com/photo-1494790108377-be9c29b2
 
 const signupText = computed(() => {
   if (!activity.value) return '报名'
+  if (isCreator.value) return '发起人无需报名'
   if (activity.value.signupStatus === 'PENDING') return '待审核'
   if (activity.value.signupStatus === 'APPROVED') return '已报名'
   if (activity.value.signupStatus === 'WAITING') return '候补中'
@@ -87,7 +97,17 @@ const signupText = computed(() => {
   return activity.value.needApproval ? '申请报名' : '立即报名'
 })
 
-const primaryDisabled = computed(() => ['APPROVED', 'PENDING', 'WAITING'].includes(activity.value?.signupStatus))
+const isCreator = computed(() => {
+  if (!activity.value?.creatorId || !auth.user?.id) return false
+  return String(activity.value.creatorId) === String(auth.user.id)
+})
+const canCancelActivity = computed(() => isCreator.value && !['CANCELLED', 'FINISHED'].includes(activity.value?.status))
+const canFinishActivity = computed(() => isCreator.value && !['CANCELLED', 'FINISHED'].includes(activity.value?.status))
+const primaryDisabled = computed(() => {
+  if (isCreator.value) return true
+  if (['CANCELLED', 'FINISHED'].includes(activity.value?.status)) return true
+  return ['APPROVED', 'PENDING', 'WAITING'].includes(activity.value?.signupStatus)
+})
 const cancelText = computed(() => activity.value?.signupStatus === 'WAITING' ? '取消候补' : '退出')
 const chatButtonText = computed(() => chatAccess.value.canAccess ? '进入活动群聊' : '活动群聊暂不可进入')
 const canReview = computed(() => {
@@ -162,6 +182,48 @@ async function toggleFavorite() {
   await load()
 }
 
+function editActivity() {
+  router.push({ path: '/publish', query: { editId: activity.value.id } })
+}
+
+async function finishCurrentActivity() {
+  try {
+    await showConfirmDialog({
+      title: '结束活动',
+      message: '确认将该活动标记为已结束？'
+    })
+  } catch {
+    return
+  }
+  actionLoading.value = true
+  try {
+    await finishActivity(activity.value.id)
+    showSuccessToast('活动已结束')
+    await load()
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function cancelCurrentActivity() {
+  try {
+    await showConfirmDialog({
+      title: '取消活动',
+      message: '取消后用户将无法继续报名，确认取消？'
+    })
+  } catch {
+    return
+  }
+  actionLoading.value = true
+  try {
+    await cancelActivity(activity.value.id)
+    showSuccessToast('活动已取消')
+    await load()
+  } finally {
+    actionLoading.value = false
+  }
+}
+
 function openChat() {
   if (!chatAccess.value.canAccess) {
     showToast(chatAccess.value.reason || '报名成功后才能进入活动群聊')
@@ -192,6 +254,18 @@ function statusText(status) {
     REJECTED: '已拒绝'
   }
   return map[status] || '未报名'
+}
+
+function activityStatusText(status) {
+  const map = {
+    SIGNING: '报名中',
+    FULL: '已满员',
+    UPCOMING: '即将开始',
+    ONGOING: '进行中',
+    FINISHED: '已结束',
+    CANCELLED: '已取消'
+  }
+  return map[status] || status || '-'
 }
 
 onMounted(load)
