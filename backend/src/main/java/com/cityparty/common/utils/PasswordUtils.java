@@ -7,6 +7,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.HexFormat;
+import java.util.regex.Pattern;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -18,6 +19,7 @@ public class PasswordUtils {
     private static final int PBKDF2_ITERATIONS = 120_000;
     private static final int PBKDF2_SALT_BYTES = 16;
     private static final int PBKDF2_KEY_BITS = 256;
+    private static final Pattern LEGACY_SHA256_PATTERN = Pattern.compile("[0-9a-f]{64}");
 
     @Value("${city-party.password.salt}")
     private String salt;
@@ -42,6 +44,10 @@ public class PasswordUtils {
             return matchesPbkdf2(rawPassword, encodedPassword);
         }
         return sha256(rawPassword + ":" + salt).equals(encodedPassword);
+    }
+
+    public boolean needsUpgrade(String encodedPassword) {
+        return encodedPassword != null && LEGACY_SHA256_PATTERN.matcher(encodedPassword).matches();
     }
 
     private String sha256(String value) {

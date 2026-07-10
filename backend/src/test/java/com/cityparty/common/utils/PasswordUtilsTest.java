@@ -31,6 +31,19 @@ class PasswordUtilsTest {
         assertThat(passwordUtils.matches("wrong", legacyHash)).isFalse();
     }
 
+    @Test
+    void identifiesOnlyLegacySha256HashesForUpgrade() {
+        PasswordUtils passwordUtils = new PasswordUtils();
+        String pbkdf2Hash = passwordUtils.encode("secret123");
+
+        assertThat(passwordUtils.needsUpgrade("a".repeat(64))).isTrue();
+        assertThat(passwordUtils.needsUpgrade(pbkdf2Hash)).isFalse();
+        assertThat(passwordUtils.needsUpgrade("pbkdf2$invalid")).isFalse();
+        assertThat(passwordUtils.needsUpgrade("not-a-password-hash")).isFalse();
+        assertThat(passwordUtils.needsUpgrade("")).isFalse();
+        assertThat(passwordUtils.needsUpgrade(null)).isFalse();
+    }
+
     private String sha256(String value) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));

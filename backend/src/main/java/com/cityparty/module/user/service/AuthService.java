@@ -81,6 +81,7 @@ public class AuthService {
         return buildLoginVO(user);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public LoginVO login(LoginDTO dto) {
         verifyCaptcha(dto.getCaptchaKey(), dto.getCaptchaCode());
         User user = userMapper.selectOne(new LambdaQueryWrapper<User>()
@@ -91,6 +92,11 @@ public class AuthService {
         }
         if (!"NORMAL".equals(user.getStatus())) {
             throw new BusinessException("账号已被禁用");
+        }
+        if (passwordUtils.needsUpgrade(user.getPasswordHash())) {
+            user.setPasswordHash(passwordUtils.encode(dto.getPassword()));
+            user.setUpdatedAt(LocalDateTime.now());
+            userMapper.updateById(user);
         }
         return buildLoginVO(user);
     }

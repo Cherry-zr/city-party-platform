@@ -3,9 +3,9 @@
     <van-nav-bar title="登录" />
     <div class="mobile-content">
       <div class="plain-panel">
-        <van-form @submit="submit">
-          <van-field v-model="form.username" name="username" label="账号" placeholder="admin / user01" required />
-          <van-field v-model="form.password" name="password" label="密码" type="password" placeholder="请输入密码" required />
+        <van-form autocomplete="off" @submit="submit">
+          <van-field v-model="form.username" name="loginAccount" label="账号" autocomplete="off" placeholder="请输入账号" required />
+          <van-field v-model="form.password" name="loginCredential" label="密码" type="password" autocomplete="new-password" placeholder="请输入密码" required />
           <van-field v-model="form.captchaCode" name="captchaCode" label="验证码" placeholder="请输入验证码" required>
             <template #button>
               <van-button size="small" type="primary" plain @click.prevent="loadCaptcha">{{ captcha.captchaText || '获取' }}</van-button>
