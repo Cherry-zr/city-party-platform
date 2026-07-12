@@ -4,6 +4,8 @@ import com.cityparty.common.result.PageResult;
 import com.cityparty.common.result.Result;
 import com.cityparty.module.activity.vo.ActivityVO;
 import com.cityparty.module.admin.service.AdminService;
+import com.cityparty.module.admin.service.DashboardService;
+import com.cityparty.module.admin.vo.DashboardAnalyticsVO;
 import com.cityparty.module.admin.vo.AdminCreditRecordVO;
 import com.cityparty.module.admin.vo.AdminNoticeVO;
 import com.cityparty.module.admin.vo.AdminUserVO;
@@ -20,6 +22,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import java.time.LocalDate;
+import java.util.List;
 
 @Tag(name = "管理员后台")
 @RestController
@@ -28,6 +32,35 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminController {
 
     private final AdminService adminService;
+    private final DashboardService dashboardService;
+
+    @Operation(summary = "运营看板首页概览")
+    @GetMapping("/dashboard/overview")
+    public Result<DashboardAnalyticsVO.Overview> dashboardOverview() { return Result.ok(dashboardService.overview()); }
+
+    @Operation(summary = "运营看板趋势")
+    @GetMapping("/dashboard/trends")
+    public Result<DashboardAnalyticsVO.Trends> dashboardTrends(@RequestParam(defaultValue="LAST_30_DAYS") String period,
+        @RequestParam(required=false) LocalDate startDate, @RequestParam(required=false) LocalDate endDate) {
+        return Result.ok(dashboardService.trends(period,startDate,endDate));
+    }
+
+    @Operation(summary = "运营看板分布")
+    @GetMapping("/dashboard/distributions")
+    public Result<DashboardAnalyticsVO.Distributions> dashboardDistributions() { return Result.ok(dashboardService.distributions()); }
+
+    @Operation(summary = "运营看板业务质量")
+    @GetMapping("/dashboard/quality")
+    public Result<DashboardAnalyticsVO.Quality> dashboardQuality(@RequestParam(defaultValue="LAST_30_DAYS") String period,
+        @RequestParam(required=false) LocalDate startDate, @RequestParam(required=false) LocalDate endDate) {
+        return Result.ok(dashboardService.quality(period,startDate,endDate));
+    }
+
+    @Operation(summary = "运营看板热门活动")
+    @GetMapping("/dashboard/popular-activities")
+    public Result<List<DashboardAnalyticsVO.PopularActivity>> dashboardPopular(@RequestParam(defaultValue="LAST_30_DAYS") String period,
+        @RequestParam(required=false) LocalDate startDate, @RequestParam(required=false) LocalDate endDate,
+        @RequestParam(defaultValue="10") int limit) { return Result.ok(dashboardService.popular(period,startDate,endDate,limit)); }
 
     @Operation(summary = "后台数据看板")
     @GetMapping("/dashboard")

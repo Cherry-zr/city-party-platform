@@ -340,3 +340,15 @@ VITE_AMAP_SECURITY_CODE=你的高德 JS API 安全密钥
 ```
 
 真实 Key 只应写入 `frontend/.env.development` 或本地私有环境文件，不要提交到 Git。
+
+## Stage 2.7 Admin Dashboard Analytics
+
+All endpoints require a currently active database user with role `ADMIN` and use the common `Result<T>` response envelope.
+
+- `GET /api/admin/dashboard/overview`: totals and today's additions; the only cached endpoint (Redis, 5 minutes, database fallback).
+- `GET /api/admin/dashboard/trends`: user, activity, signup, and review daily trends.
+- `GET /api/admin/dashboard/distributions`: signup status, activity status, category, credit, and rating distributions.
+- `GET /api/admin/dashboard/quality`: signup success rate, participation rate, average rating, waitlist, exits, and abnormal-credit users.
+- `GET /api/admin/dashboard/popular-activities`: popular activity ranking; `limit` must be from 1 to 50.
+
+The time-based endpoints accept `period=TODAY|THIS_WEEK|THIS_MONTH|LAST_7_DAYS|LAST_30_DAYS|LAST_90_DAYS|THIS_YEAR|CUSTOM`. `CUSTOM` also requires ISO dates in `startDate` and `endDate`; reversed ranges and ranges over one year are rejected with a business error. Detailed metric definitions are in `docs/dashboard-metrics.md`.

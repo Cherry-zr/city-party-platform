@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.cityparty.module.admin.mapper.DashboardMapper">
+  <select id="overview" resultType="map">
+    SELECT
+      (SELECT COUNT(*) FROM user WHERE deleted=0) userCount,
+      (SELECT COUNT(*) FROM activity WHERE deleted=0) activityCount,
+      (SELECT COUNT(*) FROM activity_signup WHERE deleted=0) signupCount,
+      (SELECT COUNT(*) FROM activity_review WHERE deleted=0) reviewCount,
+      (SELECT COUNT(*) FROM user WHERE deleted=0 AND created_at&gt;=#{today}) todayUsers,
+      (SELECT COUNT(*) FROM activity WHERE deleted=0 AND created_at&gt;=#{today}) todayActivities,
+      (SELECT COUNT(*) FROM activity_signup WHERE deleted=0 AND created_at&gt;=#{today}) todaySignups,
+      (SELECT COUNT(*) FROM activity_review WHERE deleted=0 AND created_at&gt;=#{today}) todayReviews
+  </select>
+  <select id="trend" resultType="com.cityparty.module.admin.vo.DashboardAnalyticsVO$Point">
+    SELECT DATE_FORMAT(created_at,'%Y-%m-%d') label, COUNT(*) value
+    FROM
+    <choose><when test="table == 'user'">user</when><when test="table == 'activity'">activity</when><when test="table == 'activity_signup'">activity_signup</when><otherwise>activity_review</otherwise></choose>
+    WHERE deleted=0 AND created_at&gt;=#{start} AND created_at&lt;#{end}
+    GROUP BY DATE(created_at) ORDER BY DATE(created_at)
+  </select>
+  <select id="distribution" resultType="com.cityparty.module.admin.vo.DashboardAnalyticsVO$Point">
+    <choose>
+      <when test="dimension == 'signup'">SELECT status label,COUNT(*) value FROM activity_signup WHERE deleted=0 GROUP BY status</when>
+      <when test="dimension == 'activity'">SELECT status label,COUNT(*) value FROM activity WHERE deleted=0 GROUP BY status</when>
+      <when test="dimension == 'category'">SELECT COALESCE(NULLIF(category,''),'未分类') label,COUNT(*) value FROM activity WHERE deleted=0 GROUP BY category</when>
+      <when test="dimension == 'credit'">SELECT CASE WHEN credit_score&lt;80 THEN 'ABNORMAL' WHEN credit_score&lt;100 THEN '80-99' WHEN credit_score&lt;120 THEN '100-119' ELSE '120+' END label,COUNT(*) value FROM user WHERE deleted=0 GROUP BY label</when>
+      <otherwise>SELECT CAST(rating AS CHAR) label,COUNT(*) value FROM activity_review WHERE deleted=0 GROUP BY rating</otherwise>
+    </choose>
+  </select>
+  <select id="quality" resultType="map">
+    SELECT
+      COALESCE((SELECT SUM(status IN ('APPROVED','PROMOTED','COMPLETED'))*100.0/NULLIF(COUNT(*),0) FROM activity_signup WHERE deleted=0 AND created_at&gt;=#{start} AND created_at&lt;#{end}),0) signupSuccessRate,
+      COALESCE((SELECT AVG(approved_count*100.0/NULLIF(max_participants,0)) FROM activity WHERE deleted=0 AND status&lt;&gt;'CANCELLED' AND created_at&gt;=#{start} AND created_at&lt;#{end}),0) averageParticipationRate,
+      COALESCE((SELECT AVG(rating) FROM activity_review WHERE deleted=0 AND created_at&gt;=#{start} AND created_at&lt;#{end}),0) averageRating,
+      (SELECT COUNT(*) FROM activity_waitlist WHERE deleted=0 AND status='WAITING' AND created_at&gt;=#{start} AND created_at&lt;#{end}) waitlistCount,
+      (SELECT COUNT(*) FROM activity_signup WHERE deleted=0 AND status='CANCELLED' AND created_at&gt;=#{start} AND created_at&lt;#{end}) exitCount,
+      (SELECT COUNT(*) FROM user WHERE deleted=0 AND credit_score&lt;80) abnormalCreditUserCount
+  </select>
+  <select id="popular" resultType="com.cityparty.module.admin.vo.DashboardAnalyticsVO$PopularActivity">
+    SELECT a.id activityId,a.title,
+      SUM(CASE WHEN s.status IN ('APPROVED','PROMOTED','COMPLETED') THEN 1 ELSE 0 END) successfulSignups,
+      (SELECT COUNT(*) FROM activity_waitlist w WHERE w.activity_id=a.id AND w.deleted=0 AND w.status='WAITING') waitlistCount
+    FROM activity a LEFT JOIN activity_signup s ON s.activity_id=a.id AND s.deleted=0 AND s.created_at&gt;=#{start} AND s.created_at&lt;#{end}
+    WHERE a.deleted=0 GROUP BY a.id,a.title ORDER BY successfulSignups DESC,waitlistCount DESC,a.id DESC LIMIT #{limit}
+  </select>
+</mapper>
