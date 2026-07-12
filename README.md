@@ -36,6 +36,8 @@ city-party-platform/
 ├─ database/
 ├─ docs/
 ├─ screenshots/
+├─ compose.yaml
+├─ .env.example
 └─ README.md
 ```
 
@@ -47,6 +49,7 @@ city-party-platform/
 - npm 9+
 - MySQL 8.x
 - Redis 6+
+- Docker Desktop（使用项目专用 MySQL/Redis 环境时）
 
 当前开发机已检查到 Java 17.0.16、Maven 3.9.15、Node.js v24.11.0、npm 11.6.1、MySQL 8.0.33。验证码和候补队列依赖 Redis，请保证 Redis 6379 端口可连通。
 
@@ -96,6 +99,40 @@ Test-NetConnection 127.0.0.1 -Port 6379
 ```
 
 `TcpTestSucceeded` 为 `True` 才能正常使用验证码接口。
+
+## 项目专用 Docker 开发环境
+
+本阶段只容器化 MySQL 和 Redis，不容器化前端或后端。默认宿主机端口为 MySQL `13306`、Redis `16379`，避免占用常见的本机 `3306/6379`。
+
+```powershell
+Set-Location D:\last_one-form-group\city-party-platform
+Copy-Item .env.example .env
+# 使用编辑器将 .env 中两个密码占位值替换为本地随机密码
+docker compose config
+docker compose up -d
+docker compose ps
+```
+
+启动本机后端时连接容器：
+
+```powershell
+$env:MYSQL_HOST="127.0.0.1"
+$env:MYSQL_PORT="13306"
+$env:MYSQL_DATABASE="city_party_platform"
+$env:MYSQL_USERNAME="city_party"
+$env:MYSQL_PASSWORD="你的 .env 中项目数据库密码"
+$env:REDIS_HOST="127.0.0.1"
+$env:REDIS_PORT="16379"
+Set-Location backend
+mvn spring-boot:run
+```
+
+首次创建空数据卷时只执行 `database/schema.sql`，不要再叠加执行历史 migration。详细说明见：
+
+- [Docker 开发环境](docs/docker-development.md)
+- [数据库初始化](docs/database-initialization.md)
+- [私人备份恢复](docs/private-backup-restore.md)
+- [演示数据与清理](docs/demo-data.md)
 
 ## 后端启动
 
