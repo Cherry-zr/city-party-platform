@@ -111,6 +111,59 @@ class ActivityServiceTest {
     }
 
     @Test
+    void rejectsUpdateByNonCreator() {
+        Activity activity = manageableActivity();
+        activity.setCreatorId(99L);
+        when(activityMapper.selectById(activity.getId())).thenReturn(activity);
+
+        assertThatThrownBy(() -> activityService.update(activity.getId(), activityDto()))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo(403);
+
+        verify(activityMapper, never()).updateById(any(Activity.class));
+    }
+
+    @Test
+    void rejectsUpdateAfterActivityCancelled() {
+        Activity activity = manageableActivity();
+        activity.setStatus("CANCELLED");
+        when(activityMapper.selectById(activity.getId())).thenReturn(activity);
+
+        assertThatThrownBy(() -> activityService.update(activity.getId(), activityDto()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("cannot be edited");
+
+        verify(activityMapper, never()).updateById(any(Activity.class));
+    }
+
+    @Test
+    void rejectsCancelAfterActivityFinished() {
+        Activity activity = manageableActivity();
+        activity.setStatus("FINISHED");
+        when(activityMapper.selectById(activity.getId())).thenReturn(activity);
+
+        assertThatThrownBy(() -> activityService.cancel(activity.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Finished activity");
+
+        verify(activityMapper, never()).updateById(any(Activity.class));
+    }
+
+    @Test
+    void rejectsFinishAfterActivityCancelled() {
+        Activity activity = manageableActivity();
+        activity.setStatus("CANCELLED");
+        when(activityMapper.selectById(activity.getId())).thenReturn(activity);
+
+        assertThatThrownBy(() -> activityService.finish(activity.getId()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Cancelled activity");
+
+        verify(activityMapper, never()).updateById(any(Activity.class));
+    }
+
+    @Test
     void rejectsFinishBeforeActivityStartsWithoutChangingActivity() {
         Activity activity = manageableActivity();
         activity.setStartTime(LocalDateTime.now().plusHours(1));

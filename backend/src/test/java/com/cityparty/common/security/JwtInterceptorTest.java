@@ -78,6 +78,19 @@ class JwtInterceptorTest {
                 .isEqualTo(401);
     }
 
+    @Test
+    void rejectsOldAdminTokenAfterRoleIsRemoved() {
+        JwtInterceptor interceptor = new JwtInterceptor(jwtUtils, userMapper);
+        MockHttpServletRequest request = adminRequest();
+        when(jwtUtils.parseToken("admin-token")).thenReturn(new LoginUser(1L, "admin", "ADMIN"));
+        when(userMapper.selectById(1L)).thenReturn(user(1L, "admin", "USER", "NORMAL"));
+
+        assertThatThrownBy(() -> interceptor.preHandle(request, new MockHttpServletResponse(), new Object()))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo(403);
+    }
+
     private MockHttpServletRequest adminRequest() {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/admin/dashboard");
         request.addHeader("Authorization", "Bearer admin-token");

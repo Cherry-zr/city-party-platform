@@ -50,6 +50,34 @@ class FileUploadUtilsTest {
                 .hasMessageContaining("Invalid image content");
     }
 
+    @Test
+    void rejectsEmptyFile() {
+        FileUploadUtils uploadUtils = new FileUploadUtils(uploadProperties());
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.png",
+                "image/png",
+                new byte[0]
+        );
+
+        assertThatThrownBy(() -> uploadUtils.upload(file, "avatar"))
+                .isInstanceOf(BusinessException.class);
+    }
+
+    @Test
+    void rejectsDisguisedImageWithUnsupportedExtension() {
+        FileUploadUtils uploadUtils = new FileUploadUtils(uploadProperties());
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "avatar.exe",
+                "image/png",
+                pngBytes()
+        );
+
+        assertThatThrownBy(() -> uploadUtils.upload(file, "avatar"))
+                .isInstanceOf(BusinessException.class);
+    }
+
     private UploadProperties uploadProperties() {
         UploadProperties properties = new UploadProperties();
         properties.setBaseDir(tempDir.toString());

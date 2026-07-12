@@ -78,6 +78,16 @@ class JwtHandshakeInterceptorTest {
         verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
     }
 
+    @Test
+    void rejectsMissingTokenBeforeHandshake() {
+        when(request.getURI()).thenReturn(URI.create("ws://localhost/ws"));
+
+        boolean allowed = interceptor.beforeHandshake(request, response, webSocketHandler, new HashMap<>());
+
+        assertThat(allowed).isFalse();
+        verify(response).setStatusCode(HttpStatus.UNAUTHORIZED);
+    }
+
     private void prepareRequest() {
         when(request.getURI()).thenReturn(URI.create("ws://localhost/ws?token=test-token"));
     }

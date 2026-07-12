@@ -5,6 +5,8 @@ backend/target/
 # Node / Vite
 frontend/node_modules/
 frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
 
 # Runtime uploads
 backend/uploads/avatar/*
