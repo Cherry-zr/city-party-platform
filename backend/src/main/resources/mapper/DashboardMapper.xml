@@ -17,7 +17,7 @@
     FROM
     <choose><when test="table == 'user'">user</when><when test="table == 'activity'">activity</when><when test="table == 'activity_signup'">activity_signup</when><otherwise>activity_review</otherwise></choose>
     WHERE deleted=0 AND created_at&gt;=#{start} AND created_at&lt;#{end}
-    GROUP BY DATE(created_at) ORDER BY DATE(created_at)
+    GROUP BY DATE_FORMAT(created_at,'%Y-%m-%d') ORDER BY DATE_FORMAT(created_at,'%Y-%m-%d')
   </select>
   <select id="distribution" resultType="com.cityparty.module.admin.vo.DashboardAnalyticsVO$Point">
     <choose>
@@ -39,9 +39,24 @@
   </select>
   <select id="popular" resultType="com.cityparty.module.admin.vo.DashboardAnalyticsVO$PopularActivity">
     SELECT a.id activityId,a.title,
-      SUM(CASE WHEN s.status IN ('APPROVED','PROMOTED','COMPLETED') THEN 1 ELSE 0 END) successfulSignups,
-      (SELECT COUNT(*) FROM activity_waitlist w WHERE w.activity_id=a.id AND w.deleted=0 AND w.status='WAITING') waitlistCount
-    FROM activity a LEFT JOIN activity_signup s ON s.activity_id=a.id AND s.deleted=0 AND s.created_at&gt;=#{start} AND s.created_at&lt;#{end}
-    WHERE a.deleted=0 GROUP BY a.id,a.title ORDER BY successfulSignups DESC,waitlistCount DESC,a.id DESC LIMIT #{limit}
+      COALESCE(s.successful_signups,0) successfulSignups,
+      COALESCE(w.waitlist_count,0) waitlistCount
+    FROM activity a
+    LEFT JOIN (
+      SELECT activity_id,COUNT(*) successful_signups
+      FROM activity_signup
+      WHERE deleted=0 AND status IN ('APPROVED','PROMOTED','COMPLETED')
+        AND created_at&gt;=#{start} AND created_at&lt;#{end}
+      GROUP BY activity_id
+    ) s ON s.activity_id=a.id
+    LEFT JOIN (
+      SELECT activity_id,COUNT(*) waitlist_count
+      FROM activity_waitlist
+      WHERE deleted=0 AND status='WAITING'
+        AND created_at&gt;=#{start} AND created_at&lt;#{end}
+      GROUP BY activity_id
+    ) w ON w.activity_id=a.id
+    WHERE a.deleted=0 AND (s.successful_signups &gt; 0 OR w.waitlist_count &gt; 0)
+    ORDER BY successfulSignups DESC,waitlistCount DESC,a.id DESC LIMIT #{limit}
   </select>
 </mapper>

@@ -2,6 +2,7 @@ package com.cityparty.common.exception;
 
 import com.cityparty.common.result.Result;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,7 +18,10 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public Result<Void> handleBusinessException(BusinessException e) {
+    public Result<Void> handleBusinessException(BusinessException e, HttpServletResponse response) {
+        if (e.getCode() >= 400 && e.getCode() <= 599) {
+            response.setStatus(e.getCode());
+        }
         return Result.fail(e.getCode(), e.getMessage());
     }
 

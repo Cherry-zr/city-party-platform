@@ -23,7 +23,7 @@
 | 候补数 | 选定期进入且仍在候补的记录 | `activity_waitlist.created_at` | `WAITING` | 其他状态、软删除 | `COUNT(*)` | `/quality` |
 | 退出数 | 选定期创建后最终取消的报名 | `activity_signup.created_at` | `CANCELLED` | 其他状态、软删除 | `COUNT(*)` | `/quality` |
 | 异常信用用户数 | 当前信用低于基础安全线的用户 | 无 | `credit_score < 80` | 软删除 | `COUNT(*)` | `/quality` |
-| 热门活动排行 | 成功报名优先、当前候补次优先 | 报名 `created_at` | 成功报名状态；候补 `WAITING` | 软删除 | 两指标降序，最多 50 条 | `/popular-activities` |
+| 热门活动排行 | 选定期内成功报名优先、进入且仍处于候补的记录次优先 | 报名及候补 `created_at` | 成功报名状态；候补 `WAITING` | 软删除 | 分别按活动预聚合后连接，两指标降序，最多 50 条；没有报名或候补的活动不返回 | `/popular-activities` |
 
 支持 `TODAY`、`THIS_WEEK`（周一开始）、`THIS_MONTH`、`LAST_7_DAYS`、`LAST_30_DAYS`、`LAST_90_DAYS`、`THIS_YEAR`、`CUSTOM`。`CUSTOM` 必须同时传 `startDate/endDate`，开始不得晚于结束，跨度不得超过一年。
 

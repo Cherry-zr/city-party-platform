@@ -6,6 +6,7 @@ import com.cityparty.module.admin.mapper.DashboardMapper;
 import com.cityparty.module.admin.vo.DashboardAnalyticsVO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DashboardService {
     static final String OVERVIEW_CACHE_KEY = "city-party:admin:dashboard:overview";
     private static final int MAX_RANKING_LIMIT = 50;
@@ -30,14 +32,20 @@ public class DashboardService {
         try {
             String cached = redis.opsForValue().get(OVERVIEW_CACHE_KEY);
             if (cached != null) return objectMapper.readValue(cached, DashboardAnalyticsVO.Overview.class);
-        } catch (Exception ignored) { /* Redis is optional for dashboard reads. */ }
+        } catch (Exception e) {
+            log.warn("Dashboard overview cache read failed; falling back to database ({})", e.getClass().getSimpleName());
+        }
         Map<String, Number> row = mapper.overview(LocalDate.now(clock).atStartOfDay());
         DashboardAnalyticsVO.Overview vo = new DashboardAnalyticsVO.Overview();
         vo.setUserCount(longValue(row,"userCount")); vo.setActivityCount(longValue(row,"activityCount"));
         vo.setSignupCount(longValue(row,"signupCount")); vo.setReviewCount(longValue(row,"reviewCount"));
         vo.setTodayUsers(longValue(row,"todayUsers")); vo.setTodayActivities(longValue(row,"todayActivities"));
         vo.setTodaySignups(longValue(row,"todaySignups")); vo.setTodayReviews(longValue(row,"todayReviews"));
-        try { redis.opsForValue().set(OVERVIEW_CACHE_KEY, objectMapper.writeValueAsString(vo), 5, TimeUnit.MINUTES); } catch (Exception ignored) {}
+        try {
+            redis.opsForValue().set(OVERVIEW_CACHE_KEY, objectMapper.writeValueAsString(vo), 5, TimeUnit.MINUTES);
+        } catch (Exception e) {
+            log.warn("Dashboard overview cache write failed ({})", e.getClass().getSimpleName());
+        }
         return vo;
     }
 
