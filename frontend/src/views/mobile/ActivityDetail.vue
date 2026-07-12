@@ -102,7 +102,11 @@ const isCreator = computed(() => {
   return String(activity.value.creatorId) === String(auth.user.id)
 })
 const canCancelActivity = computed(() => isCreator.value && !['CANCELLED', 'FINISHED'].includes(activity.value?.status))
-const canFinishActivity = computed(() => isCreator.value && !['CANCELLED', 'FINISHED'].includes(activity.value?.status))
+const canFinishActivity = computed(() => {
+  if (!isCreator.value || ['CANCELLED', 'FINISHED'].includes(activity.value?.status)) return false
+  const startTime = new Date(activity.value?.startTime).getTime()
+  return Number.isFinite(startTime) && startTime <= Date.now()
+})
 const primaryDisabled = computed(() => {
   if (isCreator.value) return true
   if (['CANCELLED', 'FINISHED'].includes(activity.value?.status)) return true

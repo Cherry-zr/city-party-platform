@@ -56,6 +56,7 @@ public class ActivityService {
 
     @Transactional(rollbackFor = Exception.class)
     public ActivityVO create(ActivityCreateDTO dto) {
+        validateSchedule(dto);
         if (dto.getMaxParticipants() < dto.getMinParticipants()) {
             throw new BusinessException("最大人数不能小于最小人数");
         }
@@ -169,6 +170,7 @@ public class ActivityService {
         if ("CANCELLED".equals(activity.getStatus()) || "FINISHED".equals(activity.getStatus())) {
             throw new BusinessException("Activity cannot be edited after cancel or finish.");
         }
+        validateSchedule(dto);
         if (dto.getMaxParticipants() < dto.getMinParticipants()) {
             throw new BusinessException("Max participants cannot be less than min participants.");
         }
@@ -225,9 +227,14 @@ public class ActivityService {
         if ("CANCELLED".equals(activity.getStatus())) {
             throw new BusinessException("Cancelled activity cannot be finished.");
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        if (activity.getStartTime() == null || !now.isAfter(activity.getStartTime().withNano(0))) {
+            throw new BusinessException("Activity cannot be finished before it starts.");
+        }
         activity.setStatus("FINISHED");
-        if (activity.getEndTime() == null || activity.getEndTime().isAfter(now)) {
+        if (activity.getEndTime() == null
+                || !activity.getEndTime().isAfter(activity.getStartTime())
+                || activity.getEndTime().isAfter(now)) {
             activity.setEndTime(now);
         }
         activity.setUpdatedAt(now);
@@ -341,6 +348,18 @@ public class ActivityService {
         Long userId = UserContext.getUserId();
         if (!activity.getCreatorId().equals(userId) && !UserContext.isAdmin()) {
             throw new BusinessException(403, "No permission to manage this activity.");
+        }
+    }
+
+    private void validateSchedule(ActivityCreateDTO dto) {
+        if (dto.getStartTime() == null || dto.getEndTime() == null || dto.getSignupDeadline() == null) {
+            throw new BusinessException("Activity start time, end time and signup deadline are required.");
+        }
+        if (!dto.getEndTime().isAfter(dto.getStartTime())) {
+            throw new BusinessException("Activity end time must be after start time.");
+        }
+        if (dto.getSignupDeadline().isAfter(dto.getStartTime())) {
+            throw new BusinessException("Signup deadline cannot be after activity start time.");
         }
     }
 

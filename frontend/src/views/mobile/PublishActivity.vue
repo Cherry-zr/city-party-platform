@@ -51,7 +51,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showSuccessToast } from 'vant'
+import { showFailToast, showSuccessToast } from 'vant'
 import { createActivity, getActivity, updateActivity } from '../../api/activity'
 import AmapLocationPicker from '../../components/AmapLocationPicker.vue'
 
@@ -116,6 +116,21 @@ function selectLocation(location) {
 }
 
 async function submit() {
+  const startTime = new Date(form.startTime).getTime()
+  const endTime = new Date(form.endTime).getTime()
+  const signupDeadline = new Date(form.signupDeadline).getTime()
+  if (![startTime, endTime, signupDeadline].every(Number.isFinite)) {
+    showFailToast('请输入有效的活动时间')
+    return
+  }
+  if (endTime <= startTime) {
+    showFailToast('结束时间必须晚于开始时间')
+    return
+  }
+  if (signupDeadline > startTime) {
+    showFailToast('报名截止时间不能晚于开始时间')
+    return
+  }
   loading.value = true
   try {
     const payload = { ...form, tags: tagText.value.split(',').map((item) => item.trim()).filter(Boolean) }
