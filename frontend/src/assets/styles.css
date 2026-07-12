@@ -323,6 +323,137 @@ a {
   font-weight: 700;
 }
 
+.dashboard-delta {
+  margin-top: 8px;
+  color: #667085;
+  font-size: 13px;
+}
+
+.admin-error-alert {
+  margin-bottom: 16px;
+}
+
+.admin-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.admin-grid-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-grid-wide {
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+}
+
+.admin-panel {
+  min-width: 0;
+}
+
+.admin-panel-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.admin-panel-title h2 {
+  margin: 0;
+  color: #1f2933;
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.admin-panel-title span {
+  display: block;
+  margin-top: 3px;
+  color: #667085;
+  font-size: 12px;
+}
+
+.admin-chart-shell {
+  position: relative;
+  min-height: 300px;
+}
+
+.admin-chart {
+  width: 100%;
+}
+
+.admin-chart-state,
+.admin-chart-shell > .el-empty {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.attention-list {
+  display: grid;
+  gap: 2px;
+}
+
+.attention-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 8px 0;
+  border-bottom: 1px solid #eef0f2;
+  color: #475467;
+}
+
+.attention-item:last-child {
+  border-bottom: none;
+}
+
+.attention-item strong {
+  color: #1f2933;
+  font-size: 18px;
+}
+
+.analytics-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.analytics-range {
+  margin-left: auto;
+  color: #667085;
+  font-size: 13px;
+}
+
+.analytics-quality {
+  margin-bottom: 16px;
+}
+
+.quality-card {
+  min-height: 86px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fafafa;
+  margin-bottom: 8px;
+}
+
+.quality-card span {
+  display: block;
+  color: #667085;
+  font-size: 13px;
+}
+
+.quality-card strong {
+  display: block;
+  margin-top: 9px;
+  color: #1f2933;
+  font-size: 23px;
+}
+
 .admin-pagination {
   justify-content: flex-end;
   margin-top: 16px;
@@ -387,5 +518,28 @@ a {
 
   .admin-page-heading > .el-button {
     margin-top: 10px;
+  }
+
+  .admin-grid-two,
+  .admin-grid-wide {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-filter {
+    align-items: stretch;
+  }
+
+  .analytics-filter .el-radio-group {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .analytics-filter .el-date-editor {
+    width: 100%;
+  }
+
+  .analytics-range {
+    width: 100%;
+    margin-left: 0;
   }
 }

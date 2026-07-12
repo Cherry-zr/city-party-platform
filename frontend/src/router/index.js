@@ -21,6 +21,7 @@ import MyReviews from '../views/mobile/MyReviews.vue'
 import CreditLogs from '../views/mobile/CreditLogs.vue'
 import AdminLayout from '../views/admin/AdminLayout.vue'
 import Dashboard from '../views/admin/Dashboard.vue'
+const Analytics = () => import('../views/admin/Analytics.vue')
 import UserManage from '../views/admin/UserManage.vue'
 import ActivityManage from '../views/admin/ActivityManage.vue'
 import SignupManage from '../views/admin/SignupManage.vue'
@@ -61,6 +62,7 @@ const routes = [
     children: [
       { path: '', redirect: '/admin/dashboard' },
       { path: 'dashboard', component: Dashboard },
+      { path: 'analytics', component: Analytics },
       { path: 'users', component: UserManage },
       { path: 'activities', component: ActivityManage },
       { path: 'signups', component: SignupManage },

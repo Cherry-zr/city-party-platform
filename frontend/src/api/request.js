@@ -29,10 +29,14 @@ request.interceptors.response.use(
     return payload.data
   },
   (error) => {
+    if (axios.isCancel(error)) {
+      return Promise.reject(error)
+    }
     if (error.response?.status === 401 || Number(error.response?.data?.code) === 401) {
       redirectToLogin()
     }
-    showFailToast(error.response?.data?.message || error.message || '网络错误')
+    const fallback = error.response?.status === 403 ? '无管理员权限' : '网络错误'
+    showFailToast(error.response?.data?.message || error.message || fallback)
     return Promise.reject(error)
   }
 )

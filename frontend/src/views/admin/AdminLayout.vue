@@ -5,6 +5,7 @@
         <div class="admin-brand">City Party Admin</div>
         <el-menu router background-color="#1f2933" text-color="#d8dee6" active-text-color="#ffffff" :default-active="$route.path">
           <el-menu-item index="/admin/dashboard">数据看板</el-menu-item>
+          <el-menu-item index="/admin/analytics">数据分析</el-menu-item>
           <el-menu-item index="/admin/users">用户管理</el-menu-item>
           <el-menu-item index="/admin/activities">活动管理</el-menu-item>
           <el-menu-item index="/admin/signups">报名管理</el-menu-item>

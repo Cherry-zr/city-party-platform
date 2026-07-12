@@ -4,6 +4,26 @@ export function dashboard() {
   return request.get('/api/admin/dashboard')
 }
 
+export function dashboardOverview(config = {}) {
+  return request.get('/api/admin/dashboard/overview', config)
+}
+
+export function dashboardTrends(params, config = {}) {
+  return request.get('/api/admin/dashboard/trends', { ...config, params })
+}
+
+export function dashboardDistributions(config = {}) {
+  return request.get('/api/admin/dashboard/distributions', config)
+}
+
+export function dashboardQuality(params, config = {}) {
+  return request.get('/api/admin/dashboard/quality', { ...config, params })
+}
+
+export function dashboardPopularActivities(params, config = {}) {
+  return request.get('/api/admin/dashboard/popular-activities', { ...config, params })
+}
+
 export function adminUsers(params) {
   return request.get('/api/admin/users', { params })
 }
