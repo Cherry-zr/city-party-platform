@@ -37,7 +37,7 @@ docker compose ps
 
 ```powershell
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-Get-Content -Raw -Encoding UTF8 database\demo-data.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-data.sql'
 ```
 
 ## 启动后端
@@ -137,4 +137,3 @@ npm audit fix --force
 ```
 
 因为它会触发大版本升级，应后续单独评估兼容性。
-

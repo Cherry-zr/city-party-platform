@@ -175,13 +175,13 @@ database/schema.sql -> /docker-entrypoint-initdb.d/001-schema.sql
 ```powershell
 Set-Location D:\last_one-form-group\city-party-platform
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-Get-Content -Raw -Encoding UTF8 database\demo-data.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-data.sql'
 ```
 
 清理：
 
 ```powershell
-Get-Content -Raw -Encoding UTF8 database\demo-cleanup.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-cleanup.sql'
 ```
 
 详细说明见 [docs/demo-guide.md](docs/demo-guide.md)。

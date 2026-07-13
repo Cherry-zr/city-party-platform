@@ -19,7 +19,7 @@ PowerShell 通过标准输入导入，不把密码写入命令：
 
 ```powershell
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-Get-Content -Raw -Encoding UTF8 database\demo-data.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-data.sql'
 ```
 
 密码由容器内的项目环境变量读取，不会出现在命令文本或标准输出中。脚本会先删除旧的统一演示标识数据，再重新生成，因此可重复运行，日期趋势会以本次导入时间为基准刷新。
@@ -28,7 +28,7 @@ Get-Content -Raw -Encoding UTF8 database\demo-data.sql | docker exec -i city-par
 
 ```powershell
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-Get-Content -Raw -Encoding UTF8 database\demo-cleanup.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-cleanup.sql'
 ```
 
 清理脚本只匹配 `cp_demo_%` 用户及 `[CITY_PARTY_DEMO]%` 关联数据，不删除普通业务账号或普通活动。执行前仍应核对脚本和目标数据库；不要对业务表执行 `TRUNCATE`。

@@ -63,11 +63,11 @@ INSERT INTO activity (creator_id,title,category,tags,start_time,end_time,signup_
 (@host_b,'[CITY_PARTY_DEMO] 周末自习室','学习','周末,安静',DATE_ADD(NOW(),INTERVAL 5 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 5 DAY),INTERVAL 6 HOUR),DATE_ADD(NOW(),INTERVAL 4 DAY),'杭州','演示地点 D',120.150000,30.280000,2,10,'FREE',0,NULL,NULL,'[CITY_PARTY_DEMO] 报名中活动',NULL,1,'SIGNING',1,0,DATE_SUB(NOW(),INTERVAL 7 DAY),NOW(),0),
 (@host_b,'[CITY_PARTY_DEMO] 咖啡探店','探店','低预算,轻社交',DATE_ADD(NOW(),INTERVAL 7 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 7 DAY),INTERVAL 2 HOUR),DATE_ADD(NOW(),INTERVAL 6 DAY),'上海','演示地点 E',121.450000,31.220000,2,5,'ESTIMATE',55,NULL,NULL,'[CITY_PARTY_DEMO] 即将开始活动',NULL,0,'UPCOMING',1,1,DATE_SUB(NOW(),INTERVAL 2 DAY),NOW(),0);
 
-SET @finished=(SELECT id FROM activity WHERE title='[CITY_PARTY_DEMO] 城市徒步回顾');
-SET @cancelled=(SELECT id FROM activity WHERE title='[CITY_PARTY_DEMO] 取消的观影局');
-SET @full=(SELECT id FROM activity WHERE title='[CITY_PARTY_DEMO] 桌游满员局');
-SET @signing=(SELECT id FROM activity WHERE title='[CITY_PARTY_DEMO] 周末自习室');
-SET @upcoming=(SELECT id FROM activity WHERE title='[CITY_PARTY_DEMO] 咖啡探店');
+SET @finished=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 城市徒步回顾');
+SET @cancelled=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 取消的观影局');
+SET @full=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 桌游满员局');
+SET @signing=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 周末自习室');
+SET @upcoming=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 咖啡探店');
 
 INSERT INTO activity_tag (activity_id,tag_name,created_at) VALUES
 (@finished,'新手友好',NOW()),(@finished,'周末',NOW()),(@cancelled,'轻社交',NOW()),(@full,'桌游',NOW()),(@full,'新手友好',NOW()),(@signing,'学习',NOW()),(@upcoming,'探店',NOW());

@@ -32,7 +32,7 @@
 ```powershell
 Set-Location D:\last_one-form-group\city-party-platform
 $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-Get-Content -Raw -Encoding UTF8 database\demo-data.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-data.sql'
 ```
 
 脚本会先删除旧的演示标识数据，再重新导入，因此可重复执行。
@@ -40,7 +40,7 @@ Get-Content -Raw -Encoding UTF8 database\demo-data.sql | docker exec -i city-par
 ## 清理演示数据
 
 ```powershell
-Get-Content -Raw -Encoding UTF8 database\demo-cleanup.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-cleanup.sql'
 ```
 
 清理脚本只删除演示标识数据，不清理普通业务数据，不使用 `TRUNCATE`。
@@ -89,4 +89,3 @@ WHERE activity_id IN (SELECT id FROM activity WHERE title LIKE '[CITY_PARTY_DEMO
 - 演示账号只用于本地开发。
 - 演示密码不得用于公网环境。
 - 截图不要展示密码、JWT、数据库凭据、高德 Key 或私人联系方式。
-
