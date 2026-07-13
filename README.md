@@ -1,155 +1,212 @@
 # 同城活动发现与陌生人组局平台
 
-这是一个毕业论文方向的全栈项目，目标是连接同城陌生用户，支持用户发起、发现、报名、收藏和管理线下活动。第一阶段实现核心业务最小闭环，地图、WebSocket 群聊、AA 账单、固定搭子、完整信用分规则等功能先预留结构，后续分阶段扩展。
+这是一个面向简历展示和毕业设计场景的全栈项目，核心目标是让同城用户可以发现线下活动、发布活动、报名参与、进入候补队列、群聊沟通、完成评价，并让管理员通过后台查看运营数据和基础业务记录。
+
+项目当前定位是本地可运行、可演示、可继续扩展的完整练习项目；尚未做公网部署，也不描述为线上运营项目。
+
+## 核心功能
+
+- 用户注册、登录、验证码、JWT 鉴权。
+- 用户资料、兴趣标签、个人中心、信用分记录。
+- 活动发布、编辑、取消、结束、列表、详情、附近活动地图。
+- 活动报名、发起人审核、退出报名、候补队列、候补转正。
+- 活动收藏、系统通知、WebSocket 群聊。
+- 活动结束后互评，评价会影响信用分并写入信用记录。
+- 管理员后台：用户、活动、报名、评价、信用、通知、举报只读管理。
+- 管理员运营数据看板：概览、趋势、分布、业务质量指标和热门活动排行。
+- 项目专用 MySQL / Redis Docker Compose 开发环境。
+- 后端单元测试、前端 Playwright 冒烟测试、GitHub Actions CI 和 Gitleaks 安全扫描。
 
 ## 技术栈
 
 后端：
 
 - Java 17
-- Spring Boot 3.x
+- Spring Boot 3.3.7
 - Maven
-- MySQL 8.x
-- Redis
 - MyBatis-Plus
-- JWT 拦截器鉴权
-- Knife4j 接口文档
-- 本地文件上传
+- MySQL 8.0
+- Redis
+- JWT
+- WebSocket
+- Knife4j
 
 前端：
 
-- Vue3
-- Vite
+- Vue 3
+- Vite 5
 - JavaScript
 - Vue Router
 - Pinia
 - Axios
 - Vant
 - Element Plus
+- ECharts
+- Playwright
 
-## 目录结构
+工程化：
+
+- Docker Compose：仅管理 MySQL 和 Redis
+- GitHub Actions：后端测试/打包、前端构建、安全扫描
+- Gitleaks：持续密钥扫描
+
+## 系统结构
 
 ```text
 city-party-platform/
-├─ backend/
-├─ frontend/
-├─ database/
-├─ docs/
-├─ screenshots/
-├─ compose.yaml
-├─ .env.example
+├─ backend/                  # Spring Boot 后端
+├─ frontend/                 # Vue3 前端
+├─ database/                 # schema、migration、演示数据和清理脚本
+├─ docs/                     # 项目文档、简历材料和面试材料
+├─ screenshots/              # 安全验收截图
+├─ compose.yaml              # MySQL / Redis 本地开发环境
+├─ .env.example              # Compose 环境变量模板
 └─ README.md
 ```
 
+更多结构说明见 [docs/architecture.md](docs/architecture.md)。
+
 ## 环境要求
 
-- Java 17
+- Windows 10/11 + PowerShell
+- JDK 17
 - Maven 3.8+
-- Node.js 18+
-- npm 9+
-- MySQL 8.x
-- Redis 6+
-- Docker Desktop（使用项目专用 MySQL/Redis 环境时）
+- Node.js 20 或兼容版本
+- npm
+- Docker Desktop
+- MySQL 8.0 和 Redis 7 可通过项目 Compose 启动
 
-当前开发机已检查到 Java 17.0.16、Maven 3.9.15、Node.js v24.11.0、npm 11.6.1、MySQL 8.0.33。验证码和候补队列依赖 Redis，请保证 Redis 6379 端口可连通。
+当前项目默认端口：
 
-## MySQL 初始化
+| 服务 | 地址 |
+| --- | --- |
+| 后端 | `http://127.0.0.1:8080` |
+| 前端 | `http://127.0.0.1:5173` |
+| Docker MySQL | `127.0.0.1:13306` |
+| Docker Redis | `127.0.0.1:16379` |
 
-先确认本机 MySQL 账号可以登录。推荐使用环境变量，不要把真实密码写进代码。
+## 环境变量
 
-PowerShell 示例： 
+根目录 `.env.example` 用于 Docker Compose：
 
-```powershell
-$env:MYSQL_HOST="127.0.0.1"
-$env:MYSQL_PORT="3306"
-$env:MYSQL_DATABASE="city_party_platform"
-$env:MYSQL_USERNAME="root"
-$env:MYSQL_PASSWORD="你的MySQL密码"
-
-mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD < database\schema.sql
-mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD < database\data.sql
+```text
+MYSQL_HOST_PORT=13306
+REDIS_HOST_PORT=16379
+MYSQL_PASSWORD=replace_with_a_long_random_password
+MYSQL_ROOT_PASSWORD=replace_with_another_long_random_password
+TZ=Asia/Shanghai
 ```
 
-如果已经有 Stage 1.1 数据库，不想重建全库，可以执行 Stage 2.1 增量脚本：
+前端 `frontend/.env.example` 用于高德地图：
 
-```powershell
-mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD < database\stage2.1-migration.sql
+```text
+VITE_AMAP_KEY=your_amap_js_api_key
+VITE_AMAP_SECURITY_CODE=your_amap_security_js_code
 ```
 
-Stage 2.2 在不重建数据库的前提下新增活动群聊字段，请继续执行增量迁移：
-
-```powershell
-mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD < database\stage2.2-migration.sql
-```
-
-如果不想使用 root，建议创建专用开发账号：
-
-```sql
-CREATE USER 'city_party'@'localhost' IDENTIFIED BY 'city_party_123456';
-GRANT ALL PRIVILEGES ON city_party_platform.* TO 'city_party'@'localhost';
-FLUSH PRIVILEGES;
-```
-
-## Redis 启动要求
-
-后端验证码依赖 Redis。确认 Redis 已监听本地 6379：
-
-```powershell
-Test-NetConnection 127.0.0.1 -Port 6379
-```
-
-`TcpTestSucceeded` 为 `True` 才能正常使用验证码接口。
-
-## 项目专用 Docker 开发环境
-
-本阶段只容器化 MySQL 和 Redis，不容器化前端或后端。默认宿主机端口为 MySQL `13306`、Redis `16379`，避免占用常见的本机 `3306/6379`。
-
-```powershell
-Set-Location D:\last_one-form-group\city-party-platform
-Copy-Item .env.example .env
-# 使用编辑器将 .env 中两个密码占位值替换为本地随机密码
-docker compose config
-docker compose up -d
-docker compose ps
-```
-
-启动本机后端时连接容器：
+后端常用进程级环境变量：
 
 ```powershell
 $env:MYSQL_HOST="127.0.0.1"
 $env:MYSQL_PORT="13306"
 $env:MYSQL_DATABASE="city_party_platform"
 $env:MYSQL_USERNAME="city_party"
-$env:MYSQL_PASSWORD="你的 .env 中项目数据库密码"
+$env:MYSQL_PASSWORD="你的本地数据库密码"
 $env:REDIS_HOST="127.0.0.1"
 $env:REDIS_PORT="16379"
-Set-Location backend
-mvn spring-boot:run
 ```
 
-首次创建空数据卷时只执行 `database/schema.sql`，不要再叠加执行历史 migration。详细说明见：
+不要提交真实 `.env`、数据库密码、JWT secret、高德 Key、Token、日志或数据库备份。
 
-- [Docker 开发环境](docs/docker-development.md)
-- [数据库初始化](docs/database-initialization.md)
-- [私人备份恢复](docs/private-backup-restore.md)
-- [演示数据与清理](docs/demo-data.md)
+## Docker MySQL / Redis
+
+本项目的 Compose 只管理 MySQL 和 Redis，不容器化前端或后端。
+
+```powershell
+Set-Location D:\last_one-form-group\city-party-platform
+Copy-Item .env.example .env
+notepad .env
+docker compose config
+docker compose up -d
+docker compose ps
+```
+
+默认容器：
+
+- `city-party-mysql`
+- `city-party-redis`
+
+默认数据卷：
+
+- `city_party_mysql_data`
+- `city_party_redis_data`
+
+详细说明见 [docs/docker-development.md](docs/docker-development.md)。
+
+## 数据库初始化和 migration
+
+空数据卷首次启动时，Compose 会挂载：
+
+```text
+database/schema.sql -> /docker-entrypoint-initdb.d/001-schema.sql
+```
+
+`database/schema.sql` 是当前完整基线，已经包含 Stage 2.1 到 Stage 2.7 所需结构。空库首次启动不要再叠加执行 `stage2.*-migration.sql`。
+
+旧库升级时，先在仓库外备份，再按真实库状态选择执行：
+
+- `database/stage2.1-migration.sql`
+- `database/stage2.2-migration.sql`
+- `database/stage2.3-migration.sql`
+- `database/stage2.4-migration.sql`
+- `database/stage2.6-migration.sql`
+
+详细说明见 [docs/database-design.md](docs/database-design.md) 和 [docs/development-setup.md](docs/development-setup.md)。
+
+## 导入演示数据
+
+演示数据脚本只处理统一标识的数据：
+
+- 用户名前缀：`cp_demo_`
+- 活动和内容标识：`[CITY_PARTY_DEMO]`
+
+导入：
+
+```powershell
+Set-Location D:\last_one-form-group\city-party-platform
+$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+Get-Content -Raw -Encoding UTF8 database\demo-data.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+```
+
+清理：
+
+```powershell
+Get-Content -Raw -Encoding UTF8 database\demo-cleanup.sql | docker exec -i city-party-mysql sh -c 'MYSQL_PWD="$MYSQL_PASSWORD" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform'
+```
+
+详细说明见 [docs/demo-guide.md](docs/demo-guide.md)。
 
 ## 后端启动
 
 ```powershell
-cd D:\last_one-form-group\city-party-platform\backend
-$env:MYSQL_USERNAME="root"
-$env:MYSQL_PASSWORD="你的MySQL密码"
+Set-Location D:\last_one-form-group\city-party-platform\backend
+$env:MYSQL_HOST="127.0.0.1"
+$env:MYSQL_PORT="13306"
+$env:MYSQL_DATABASE="city_party_platform"
+$env:MYSQL_USERNAME="city_party"
+$env:MYSQL_PASSWORD="你的本地数据库密码"
+$env:REDIS_HOST="127.0.0.1"
+$env:REDIS_PORT="16379"
 mvn spring-boot:run
 ```
 
-默认后端地址：
+后端地址：
 
 ```text
 http://127.0.0.1:8080
 ```
 
-Knife4j 文档地址：
+Knife4j：
 
 ```text
 http://127.0.0.1:8080/doc.html
@@ -158,332 +215,112 @@ http://127.0.0.1:8080/doc.html
 ## 前端启动
 
 ```powershell
-cd D:\last_one-form-group\city-party-platform\frontend
-npm install
+Set-Location D:\last_one-form-group\city-party-platform\frontend
+npm ci
 npm run dev
 ```
 
-默认前端地址：
+前端地址：
 
 ```text
 http://127.0.0.1:5173
 ```
 
-Vite 已配置代理：
+Vite 代理：
 
 - `/api` -> `http://127.0.0.1:8080`
 - `/uploads` -> `http://127.0.0.1:8080`
+- `/ws` -> `ws://127.0.0.1:8080/ws`
 
-## 高德地图配置
+## 测试命令
 
-Stage 2.1 使用高德地图 JS API 2.0 实现地图浏览、Marker 展示和发布活动选点。不要把真实 Key 写进源码，也不要提交真实 `.env` 文件。
-
-1. 复制前端环境变量模板：
-
-```powershell
-cd D:\last_one-form-group\city-party-platform\frontend
-Copy-Item .env.example .env.development
-```
-
-2. 在 `frontend\.env.development` 中填写自己的高德配置：
-
-```text
-VITE_AMAP_KEY=你的高德地图 JS API Key
-VITE_AMAP_SECURITY_CODE=你的高德 JS API 安全密钥
-```
-
-3. 重启前端：
-
-```powershell
-npm run dev
-```
-
-如果未配置 Key 或安全密钥，地图页和选点弹窗会显示明确提示，发布活动仍可手动填写城市、地址、经度和纬度。
-
-## Redis 候补队列说明
-
-Stage 2.1 使用 Redis List 维护候补顺序，Key 格式为：
-
-```text
-activity:waitlist:{activityId}
-```
-
-选择 Redis List 的原因是业务只需要先进先出：用户加入候补时 `RPUSH`，有人退出已通过报名后 `LPOP` 取第一位自动转正。MySQL 的 `activity_waitlist` 表会同时保存候补记录，避免 Redis 数据丢失后业务状态不可追踪。
-
-## 测试账号
-
-所有测试账号密码均为 `123456`。
-
-| 角色 | 账号 |
-| --- | --- |
-| 管理员 | admin |
-| 普通用户 | user01 |
-| 普通用户 | user02 |
-| 普通用户 | user03 |
-| 普通用户 | user04 |
-
-## 核心接口测试步骤
-
-1. 获取验证码：`GET /api/auth/captcha`
-2. 登录：`POST /api/auth/login`
-3. 当前用户：`GET /api/user/me`
-4. 个人中心概览：`GET /api/user/profile-overview`
-5. 修改资料：`PUT /api/user/profile`
-6. 发布活动：`POST /api/activities`
-7. 编辑活动：`PUT /api/activities/{id}`
-8. 取消活动：`PATCH /api/activities/{id}/cancel`
-9. 结束活动：`PATCH /api/activities/{id}/finish`
-10. 活动列表：`GET /api/activities`
-11. 活动详情：`GET /api/activities/{id}`
-12. 我的活动分类：`GET /api/activities/my?type=published`
-13. 附近活动：`GET /api/activities/nearby`
-14. 报名活动：`POST /api/activities/{id}/signup`
-15. 退出报名：`POST /api/activities/{id}/signup/cancel`
-16. 加入候补：`POST /api/activities/{id}/waitlist`
-17. 取消候补：`POST /api/activities/{id}/waitlist/cancel`
-18. 查看候补列表：`GET /api/activities/{id}/waitlist`
-19. 审核报名：`POST /api/signups/{signupId}/review`
-20. 收藏活动：`POST /api/activities/{id}/favorite`
-21. 我的收藏：`GET /api/favorites/my`
-22. 我的通知：`GET /api/notices/my`
-23. 标记通知已读：`PUT /api/notices/{id}/read`
-24. 未读通知数：`GET /api/notices/unread-count`
-25. 信用中心概览：`GET /api/credit/overview`
-26. 我的评价：`GET /api/reviews/my?type=received`
-27. 后台看板：`GET /api/admin/dashboard`
-28. 后台评价：`GET /api/admin/reviews`
-29. 后台信用记录：`GET /api/admin/credits`
-30. 后台通知记录：`GET /api/admin/notices`
-
-请求需要在 `Authorization` 请求头携带：
-
-```text
-Bearer 登录返回的token
-```
-
-未匹配的 `/api/**` 请求会返回统一错误结构：
-
-```json
-{
-  "code": 404,
-  "message": "接口不存在",
-  "data": null
-}
-```
-
-## 第一阶段已完成功能
-
-- 登录注册与 JWT 鉴权
-- Redis 文本验证码
-- USER / ADMIN 角色权限
-- 当前用户信息、资料编辑、兴趣标签
-- 用户公开主页
-- 头像上传、活动封面上传
-- 活动发布、列表、详情、分类筛选
-- 报名、退出、发起人审核
-- 收藏、取消收藏、我的收藏
-- 用户端 H5 页面
-- 管理员后台基础页面
-- 数据看板、用户管理、活动管理、报名管理、信用分展示、举报入口
-- 数据库结构和测试数据
-- Knife4j 接口文档
-
-## 第二阶段 2.1 已完成功能
-
-- 高德地图配置占位和安全密钥读取
-- 用户端 `/map` 附近活动地图页
-- 活动 Marker、距离筛选、地图详情跳转
-- 发布活动地图选点和经纬度回填
-- `GET /api/activities/nearby` 附近活动接口
-- Redis List 候补队列和 MySQL 候补记录
-- 候补自动转正和系统通知记录
-- 个人中心系统通知基础列表与已读状态
-- 后台活动候补人数展示和报名状态筛选
-
-## 第二阶段 2.2 已完成功能
-
-- WebSocket 活动群聊：`ws://127.0.0.1:5173/ws?token=<JWT>`，前端 dev server 通过 `/ws` 代理到后端。
-- 活动群聊权限：活动发起人和 `APPROVED` 报名用户可进入，未报名、待审核、候补、拒绝、退出用户不可进入。
-- 聊天记录 MySQL 持久化：`chat_message` 保存活动、发送人、昵称、头像、内容、类型和发送时间。
-- 群聊历史消息接口：`GET /api/activities/{activityId}/chat/messages`。
-- HTTP 兼容发消息接口：`POST /api/activities/{activityId}/chat/messages`。
-- 群聊权限检查接口：`GET /api/activities/{activityId}/chat/access`。
-- 系统通知 WebSocket 实时推送：候补转正等通知写入 MySQL 后会推送给在线用户。
-- 通知未读数量和已读状态强化：新增 `PUT /api/notices/read-all`，保留单条已读和未读数接口。
-
-WebSocket 聊天发送格式：
-
-```json
-{
-  "type": "CHAT",
-  "activityId": 1,
-  "content": "大家几点集合？"
-}
-```
-
-WebSocket 聊天广播格式：
-
-```json
-{
-  "type": "CHAT",
-  "activityId": 1,
-  "messageId": 100,
-  "senderId": 2,
-  "senderNickname": "user02",
-  "senderAvatar": "/uploads/avatar/user02.png",
-  "content": "大家几点集合？",
-  "createdAt": "2026-07-08 19:00:00"
-}
-```
-
-WebSocket 通知推送格式：
-
-```json
-{
-  "type": "NOTICE",
-  "noticeId": 1,
-  "noticeType": "WAITLIST_PROMOTED",
-  "title": "候补转正通知",
-  "content": "你候补的活动已转为报名成功",
-  "relatedId": 20,
-  "createdAt": "2026-07-08 19:00:00"
-}
-```
-
-## 第二阶段 2.3 已完成功能
-
-- 活动结束后，活动发起人和 `APPROVED` 报名成员可以互相评价。
-- 单次评价包含 1–5 分、最多 500 字评价内容和最多 5 个标签。
-- 同一活动、评价人、被评价人只能生成一条评价，前后端校验与数据库唯一约束共同防重。
-- 信用分规则：5 分 `+2`、4 分 `+1`、3 分 `0`、2 分 `-2`、1 分 `-4`，最终分数限制在 60–120。
-- 评价、信用分更新、`credit_record` 日志和系统通知在同一事务中完成。
-- 评价通知使用 `ACTIVITY_REVIEW` 类型，并复用 Stage 2.2 WebSocket `NOTICE` 实时推送。
-- 新增活动评价、我的评价、信用分明细三个移动端页面。
-
-Stage 2.3 数据库迁移：
-
-```powershell
-cd D:\last_one-form-group\city-party-platform
-mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD city_party_platform
-```
-
-进入 MySQL 后执行：
-
-```sql
-SOURCE database/stage2.3-migration.sql;
-DESC activity_review;
-DESC credit_record;
-```
-
-## 第二阶段 2.4 已完成功能
-
-- 个人中心集中展示基础资料、信用分、信用等级、活动统计、评价统计和实时未读通知数。
-- 信用等级分为：110–120 优秀、100–109 良好、80–99 正常、60–79 待提升。
-- “我的活动”支持我发布的、我参与的、候补中、已结束四类分页列表。
-- 已结束活动按 `endTime <= 当前时间` 判断，并限定为当前用户发布或已通过报名参与的活动。
-- “我的评价”继续复用 Stage 2.3 的发出/收到评价页面和接口。
-- 信用中心复用 `credit_record`，展示变化原因、前后分值、时间及可解析的关联活动。
-- 通知中心继续复用 `system_notice` 和 Stage 2.2 WebSocket `NOTICE`，支持单条已读和一键已读。
-- 移动端补齐加载、空状态、错误重试、未登录跳转和登录后站内回跳。
-
-Stage 2.4 数据库迁移只补充查询索引，不新增业务表或字段：
-
-```powershell
-cd D:\last_one-form-group\city-party-platform
-mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD city_party_platform
-```
-
-进入 MySQL 后执行：
-
-```sql
-SOURCE database/stage2.4-migration.sql;
-SHOW INDEX FROM activity_signup;
-SHOW INDEX FROM activity_waitlist;
-SHOW INDEX FROM system_notice;
-```
-
-## 第二阶段 2.5 已完成功能
-
-- 复用现有 `user.role` 字段识别管理员，角色值为 `ADMIN`。
-- `/api/admin/**` 由后端 JWT 拦截器统一校验；普通用户调用时返回业务响应码 `403`。
-- 个人中心仅对管理员显示“管理员后台”入口，后台页面路径为 `/admin/dashboard`。
-- 数据看板展示用户、活动、报名、评价和通知总数。
-- 用户管理支持账号、手机号和昵称搜索，并可查看基础资料、信用分及创建时间。
-- 活动管理支持关键词、分类和状态筛选，详情中可以查看报名及候补用户。
-- 报名、评价、信用记录和系统通知提供只读分页查询。
-- 不提供用户禁用、活动下架、数据删除、人工信用分调整或通知群发。
-- Stage 2.5 复用已有 `user`、`activity`、`activity_signup`、`activity_waitlist`、`activity_review`、`credit_record` 和 `system_notice`，不新增迁移脚本。
-
-Windows PowerShell 验收命令：
+后端：
 
 ```powershell
 Set-Location D:\last_one-form-group\city-party-platform\backend
 mvn test
+mvn clean package -DskipTests
+mvn dependency:tree
+```
 
+前端：
+
+```powershell
 Set-Location D:\last_one-form-group\city-party-platform\frontend
+npm ci
 npm run build
+npm run test:e2e
+npm audit
+npm audit --omit=dev
 ```
 
-## 第二阶段 2.6 已完成功能
-
-- 完整建库脚本已同步 `chat_message` 的昵称、头像、消息类型字段和聊天查询索引。
-- 新增 `database/stage2.6-migration.sql`，给 `activity_signup` 增加 `activity_id + user_id` 唯一约束，防止并发重复报名。
-- 报名、审核通过和候补转正改为数据库条件更新活动人数，降低并发超员风险。
-- 用户侧分页统一限制 `current >= 1`、`size <= 100`，附近活动查询增加经纬度边界框预过滤。
-- 活动发起人或管理员可以编辑、取消、结束活动；移动端详情页和发布页已支持对应操作。
-- JWT 拦截器和 WebSocket 握手会复核数据库中的用户状态和角色，避免旧 token 继续使用旧权限。
-- 新注册密码使用 PBKDF2 哈希，兼容旧 SHA-256 哈希；上传图片增加文件头校验。
-- CORS 和 WebSocket Origin 支持通过 `CORS_ALLOWED_ORIGIN_PATTERNS` 环境变量配置。
-- 登录/注册页不再默认填入演示密码，也不再自动填入验证码。
-
-Stage 2.6 数据库迁移：
+根目录：
 
 ```powershell
-cd D:\last_one-form-group\city-party-platform
-mysql -u$env:MYSQL_USERNAME -p$env:MYSQL_PASSWORD city_party_platform
+Set-Location D:\last_one-form-group\city-party-platform
+docker compose config --quiet
+git diff --check
+git status --short
 ```
 
-进入 MySQL 后执行：
+阶段 6 最终验收结果：
 
-```sql
-SOURCE database/stage2.6-migration.sql;
-SHOW INDEX FROM activity_signup;
-```
+- 后端测试：85 个，通过 85，失败 0，错误 0，跳过 0。
+- Playwright：2 个，通过 2，失败 0。
+- 前端构建：通过，Vite 转换模块 2530。
 
-如果旧库中已经存在同一活动、同一用户的重复报名记录，新增唯一约束前需要先人工清理重复数据。
+详细说明见 [docs/testing-guide.md](docs/testing-guide.md)。
 
-## 后续待开发功能
+## 演示步骤
 
-- AA 账单分摊与模拟支付确认
-- 固定搭子申请与兴趣推荐
-- 举报处理完整流程
-- 推荐算法和热门活动排行
+1. 启动 Docker MySQL / Redis。
+2. 导入演示数据。
+3. 启动后端。
+4. 启动前端。
+5. 使用演示管理员登录后台。
+6. 访问 `/admin/dashboard` 查看运营概览。
+7. 访问 `/admin/analytics` 查看数据分析。
+8. 使用普通演示用户访问用户端活动列表、详情、发布、编辑、取消、结束等流程。
 
-## 常见错误
+完整步骤见 [docs/demo-guide.md](docs/demo-guide.md)。
 
-### MySQL 登录失败
+## 截图
 
-错误示例：
+安全截图保存在 `screenshots/`，已检查不包含密码、JWT、数据库凭据、高德 Key 或私人联系方式。
 
-```text
-ERROR 1045 (28000): Access denied for user 'root'@'localhost'
-```
+| 页面 | 截图 |
+| --- | --- |
+| 管理员运营概览 | `screenshots/stage2.7-admin-overview.png` |
+| 管理员数据分析 | `screenshots/stage2.7-admin-analytics.png` |
+| 登录安全 | `screenshots/stage2.6-login-security.png` |
+| 数据库唯一索引 | `screenshots/stage2.6-db-unique-index.png` |
+| 后端测试 | `screenshots/stage2.6-backend-tests.png` |
 
-说明当前密码不正确。请用自己的 MySQL 账号密码设置环境变量：
+## 安全说明
 
-```powershell
-$env:MYSQL_USERNAME="你的账号"
-$env:MYSQL_PASSWORD="你的密码"
-```
+- JWT 只保存用户 ID、用户名、角色和过期时间；HTTP 拦截器和 WebSocket 握手会重新查询数据库用户状态和角色。
+- 新注册密码使用 PBKDF2；旧 SHA-256 哈希在登录成功后自动升级。
+- `/api/admin/**` 后端强制要求当前数据库用户仍为 `ADMIN` 且状态为 `NORMAL`。
+- 报名通过数据库唯一约束和条件更新减少重复报名和并发超员。
+- 文件上传校验扩展名和文件头，只允许 JPG、PNG、WebP。
+- 首页数据看板概览使用 Redis 5 分钟缓存；Redis 异常时回退数据库。
+- CI 中增加 Gitleaks 扫描，发现疑似真实密钥时工作流失败。
 
-### Redis 连接失败
+## 已知限制
 
-确认 Redis 6379 是否可用：
+- 目前没有公网部署。
+- AA 账单、固定搭子、举报处理仍是预留或基础结构。
+- 数据看板只缓存首页概览，关键业务写入后的主动失效尚未统一接入。
+- `echarts` 存在 production moderate 级别依赖审计提示，兼容修复需要评估 ECharts 6 升级。
+- `vite` / `esbuild` 存在开发依赖审计提示，后续可结合构建链升级统一处理。
+- GitHub Actions 当前成功，但 GitHub 平台提示 Node.js 20 action runtime 未来弃用 warning，后续可按平台建议升级。
 
-```powershell
-Test-NetConnection 127.0.0.1 -Port 6379
-```
+## 后续公开部署方向
 
-### npm audit 提示漏洞
-
-当前依赖安装后可能提示漏洞。不要直接执行 `npm audit fix --force`，它可能升级主版本并引入兼容性问题。第一阶段先保证项目可运行，后续单独评估依赖升级。
+- 独立生成生产环境 JWT secret、数据库密码和地图 Key。
+- 禁用或删除演示账号。
+- 使用 HTTPS、反向代理和域名。
+- 对上传目录接入对象存储或静态资源服务。
+- 按公网环境配置 CORS 和 WebSocket Origin。
+- 接入日志脱敏、备份策略、监控告警和依赖升级计划。
+- 重新执行 Gitleaks、npm audit、Maven dependency 审计和全量测试。
