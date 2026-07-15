@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="title description">
+  <title id="title">CityParty</title>
+  <desc id="description">同城活动发现与陌生人组局平台仓库横幅</desc>
+
+  <rect width="1280" height="360" rx="24" fill="#111827"/>
+  <rect x="1" y="1" width="1278" height="358" rx="23" fill="none" stroke="#374151" stroke-width="2"/>
+
+  <g opacity="0.34" stroke="#4B5563" stroke-width="1">
+    <path d="M0 92H1280M0 180H1280M0 268H1280"/>
+    <path d="M116 0V360M260 0V360M404 0V360M1020 0V360M1164 0V360"/>
+  </g>
+
+  <g transform="translate(82 70)">
+    <path d="M92 16C50 16 16 50 16 92c0 63 76 126 76 126s76-63 76-126c0-42-34-76-76-76Z" fill="#14B8A6"/>
+    <circle cx="92" cy="92" r="31" fill="#111827"/>
+    <circle cx="92" cy="92" r="13" fill="#F9FAFB"/>
+
+    <path d="M168 80C220 43 284 42 338 74" fill="none" stroke="#5EEAD4" stroke-width="4" stroke-linecap="round" stroke-dasharray="9 12"/>
+    <circle cx="216" cy="55" r="11" fill="#F9FAFB" stroke="#14B8A6" stroke-width="5"/>
+    <circle cx="286" cy="53" r="11" fill="#F9FAFB" stroke="#14B8A6" stroke-width="5"/>
+    <circle cx="344" cy="82" r="18" fill="#F9FAFB"/>
+    <circle cx="344" cy="77" r="6" fill="#111827"/>
+    <path d="M333 92c5-10 17-10 22 0" fill="none" stroke="#111827" stroke-width="4" stroke-linecap="round"/>
+
+    <rect x="225" y="126" width="151" height="72" rx="18" fill="#1F2937" stroke="#6B7280"/>
+    <path d="M254 198l-5 23 29-23" fill="#1F2937" stroke="#6B7280" stroke-linejoin="round"/>
+    <circle cx="263" cy="161" r="6" fill="#5EEAD4"/>
+    <circle cx="300" cy="161" r="6" fill="#5EEAD4"/>
+    <circle cx="337" cy="161" r="6" fill="#5EEAD4"/>
+  </g>
+
+  <g font-family="Segoe UI, Microsoft YaHei, Arial, sans-serif" fill="#F9FAFB">
+    <text x="570" y="132" font-size="72" font-weight="700" letter-spacing="1">CityParty</text>
+    <text x="574" y="190" font-size="30" font-weight="600">同城活动发现与陌生人组局平台</text>
+    <text x="574" y="236" font-size="21" fill="#D1D5DB">Discover locally · Join confidently · Connect in real time</text>
+  </g>
+
+  <g transform="translate(574 274)" font-family="Segoe UI, Microsoft YaHei, Arial, sans-serif" font-size="16" fill="#CCFBF1">
+    <rect width="116" height="34" rx="17" fill="#134E4A"/>
+    <text x="58" y="22" text-anchor="middle">活动发现</text>
+    <rect x="130" width="116" height="34" rx="17" fill="#134E4A"/>
+    <text x="188" y="22" text-anchor="middle">报名候补</text>
+    <rect x="260" width="116" height="34" rx="17" fill="#134E4A"/>
+    <text x="318" y="22" text-anchor="middle">实时群聊</text>
+    <rect x="390" width="116" height="34" rx="17" fill="#134E4A"/>
+    <text x="448" y="22" text-anchor="middle">运营分析</text>
+  </g>
+</svg>
