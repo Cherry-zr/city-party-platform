@@ -1,129 +1,169 @@
-# 同城活动发现与陌生人组局平台
+<p align="center">
+  <img src="docs/assets/cityparty-banner.svg" alt="CityParty — 同城活动发现与陌生人组局平台" width="100%" />
+</p>
 
-这是一个面向简历展示和毕业设计场景的全栈项目，核心目标是让同城用户可以发现线下活动、发布活动、报名参与、进入候补队列、群聊沟通、完成评价，并让管理员通过后台查看运营数据和基础业务记录。
+<h1 align="center">CityParty — 同城活动发现与陌生人组局平台</h1>
 
-项目当前定位是本地可运行、可演示、可继续扩展的完整练习项目；尚未做公网部署，也不描述为线上运营项目。
+<p align="center"><strong>City Activity Discovery &amp; Social Meetup Platform</strong></p>
 
-## 核心功能
+<p align="center">
+  基于 Vue 3 与 Spring Boot 构建的同城线下活动组局平台，覆盖活动发现、地图浏览、报名候补、实时群聊、互评信用与管理员运营分析等完整业务流程。
+</p>
 
-- 用户注册、登录、验证码、JWT 鉴权。
-- 用户资料、兴趣标签、个人中心、信用分记录。
-- 活动发布、编辑、取消、结束、列表、详情、附近活动地图。
-- 活动报名、发起人审核、退出报名、候补队列、候补转正。
-- 活动收藏、系统通知、WebSocket 群聊。
-- 活动结束后互评，评价会影响信用分并写入信用记录。
-- 管理员后台：用户、活动、报名、评价、信用、通知、举报只读管理。
-- 管理员运营数据看板：概览、趋势、分布、业务质量指标和热门活动排行。
-- 项目专用 MySQL / Redis Docker Compose 开发环境。
-- 后端单元测试、前端 Playwright 冒烟测试、GitHub Actions CI 和 Gitleaks 安全扫描。
+<p align="center">
+  <a href="https://github.com/Cherry-zr/city-party-platform/actions/workflows/ci.yml"><img src="https://github.com/Cherry-zr/city-party-platform/actions/workflows/ci.yml/badge.svg?branch=master" alt="CI" /></a>
+  <a href="https://github.com/Cherry-zr/city-party-platform/actions/workflows/security-scan.yml"><img src="https://github.com/Cherry-zr/city-party-platform/actions/workflows/security-scan.yml/badge.svg?branch=master" alt="Security Scan" /></a>
+  <img src="https://img.shields.io/badge/Java-17-374151?style=flat" alt="Java 17" />
+  <img src="https://img.shields.io/badge/Spring%20Boot-3.3.7-2F855A?style=flat" alt="Spring Boot 3.3.7" />
+  <img src="https://img.shields.io/badge/Vue-3-319795?style=flat" alt="Vue 3" />
+  <img src="https://img.shields.io/badge/Status-Local%20Demo%20Ready-4B5563?style=flat" alt="Local Demo Ready" />
+</p>
+
+<p align="center">
+  <a href="#项目亮点">项目亮点</a> ·
+  <a href="#功能演示">功能演示</a> ·
+  <a href="#核心业务流程">业务流程</a> ·
+  <a href="#技术架构">技术架构</a> ·
+  <a href="#快速开始">快速开始</a> ·
+  <a href="#项目文档">项目文档</a> ·
+  <a href="#测试与工程质量">工程质量</a> ·
+  <a href="#已知限制">已知限制</a>
+</p>
+
+> 本项目面向毕业设计、简历与全栈工程能力展示，目前提供完整的本地运行和演示流程，暂未开放公网访问，也不包含线上运营数据。
+
+## 项目亮点
+
+| 模块 | 实现重点 |
+| --- | --- |
+| 活动发现与生命周期 | 支持活动列表、附近活动地图、位置选择，以及发布、编辑、取消、结束等状态流转。 |
+| 报名候补与一致性 | 支持报名审核、退出、候补队列和候补转正；通过数据库唯一约束与条件更新降低重复报名和并发超员风险。 |
+| 实时互动 | 基于 WebSocket 提供活动群聊与系统通知推送，并维护通知未读状态。 |
+| 评价信用闭环 | 活动结束后生成互评关系，评价结果写入信用记录并更新用户信用分。 |
+| 运营分析与安全 | 提供管理员概览、趋势、分布、业务质量指标和热门活动排行；实现 JWT 状态复核、PBKDF2 密码升级与上传文件头校验。 |
+| 工程化交付 | 使用 Docker Compose 管理 MySQL/Redis，本地与 CI 覆盖 Maven、前端构建、Playwright 冒烟测试和 Gitleaks 密钥扫描。 |
+
+## 功能演示
+
+以下均为仓库中的本地验收截图，页面数据为演示或测试数据，不代表线上运营情况。
+
+<table>
+  <tr>
+    <td align="center"><strong>活动首页</strong></td>
+    <td align="center"><strong>报名与候补详情</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/stage1.1-home.png" alt="移动端活动首页" width="300" /></td>
+    <td align="center"><img src="screenshots/stage2.1-waitlist.png" alt="活动详情与候补信息" width="300" /></td>
+  </tr>
+</table>
+
+<details open>
+  <summary><strong>附近活动地图</strong></summary>
+  <br />
+  <img src="screenshots/stage2.1-map.png" alt="地图附近活动与距离筛选" width="320" />
+</details>
+
+<p><strong>WebSocket 活动群聊</strong></p>
+
+<img src="screenshots/stage2.2-chat.png" alt="WebSocket 活动群聊" width="760" />
+
+<table>
+  <tr>
+    <td align="center"><strong>管理员运营概览</strong></td>
+    <td align="center"><strong>管理员数据分析</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/stage2.7-admin-overview.png" alt="管理员运营概览" width="560" /></td>
+    <td align="center"><img src="screenshots/stage2.7-admin-analytics.png" alt="管理员数据分析" width="560" /></td>
+  </tr>
+</table>
+
+其余页面、测试与数据库验收截图可在 [`screenshots/`](screenshots/) 中查看。
+
+## 核心业务流程
+
+```mermaid
+flowchart LR
+    A["发现活动"] --> B["查看详情"]
+    B --> C["报名或进入候补"]
+    C --> D["发起人审核"]
+    D --> E["群聊与通知"]
+    E --> F["活动结束"]
+    F --> G["用户互评"]
+    G --> H["信用分更新"]
+```
+
+报名容量通过数据库条件更新控制；候补顺序由 Redis List 维护、MySQL 保存最终业务状态，Redis 不可用时可回退查询 MySQL。详细流程见[核心业务流程](docs/business-flows.md)。
+
+## 技术架构
+
+```mermaid
+flowchart TB
+    Mobile["移动端用户页面"] --> Frontend["Vue 3 + Vite 前端"]
+    Admin["管理员后台"] --> Frontend
+    Frontend -->|"REST API"| Backend["Spring Boot 3 后端"]
+    Frontend -->|"WebSocket"| Backend
+    Frontend --> AMap["高德地图 JS API"]
+    Backend --> MySQL[("MySQL 8")]
+    Backend --> Redis[("Redis 7")]
+    Backend --> Knife4j["Knife4j API 文档"]
+
+    Actions["GitHub Actions"] -.-> Frontend
+    Actions -.-> Backend
+    Playwright["Playwright"] -.-> Frontend
+    Gitleaks["Gitleaks"] -.-> Repository["Git 历史与提交"]
+```
+
+- 前端同时提供移动端用户页面和 Element Plus 管理后台，通过 Axios 与 Vite 代理访问后端。
+- 后端按 Controller、Service、Mapper 分层，统一处理鉴权、状态流转、事务和数据访问。
+- MySQL 保存最终业务状态；Redis 用于验证码、候补顺序和管理员概览缓存。
+
+更多设计细节见[系统架构说明](docs/architecture.md)与[安全与并发设计](docs/security-and-concurrency.md)。
 
 ## 技术栈
 
-后端：
+| 分类 | 技术 |
+| --- | --- |
+| 前端 | Vue 3.5、Vite 5.4、JavaScript、Vue Router、Pinia、Axios、Vant、Element Plus、ECharts 5.6 |
+| 后端 | Java 17、Spring Boot 3.3.7、Maven、MyBatis-Plus 3.5.7、Knife4j 4.5 |
+| 数据与缓存 | MySQL 8.0.33、Redis 7.2、数据库约束、条件更新、TTL 缓存与故障回退 |
+| 实时通信与安全 | WebSocket、JWT、PBKDF2、数据库用户状态与角色复核、上传文件签名校验 |
+| 测试与工程化 | JUnit 5、Playwright 1.61、Docker Compose、GitHub Actions、Gitleaks |
 
-- Java 17
-- Spring Boot 3.3.7
-- Maven
-- MyBatis-Plus
-- MySQL 8.0
-- Redis
-- JWT
-- WebSocket
-- Knife4j
-
-前端：
-
-- Vue 3
-- Vite 5
-- JavaScript
-- Vue Router
-- Pinia
-- Axios
-- Vant
-- Element Plus
-- ECharts
-- Playwright
-
-工程化：
-
-- Docker Compose：仅管理 MySQL 和 Redis
-- GitHub Actions：后端测试/打包、前端构建、安全扫描
-- Gitleaks：持续密钥扫描
-
-## 系统结构
+## 项目结构
 
 ```text
 city-party-platform/
-├─ backend/                  # Spring Boot 后端
-├─ frontend/                 # Vue3 前端
-├─ database/                 # schema、migration、演示数据和清理脚本
-├─ docs/                     # 项目文档、简历材料和面试材料
-├─ screenshots/              # 安全验收截图
-├─ compose.yaml              # MySQL / Redis 本地开发环境
-├─ .env.example              # Compose 环境变量模板
+├─ backend/              # Spring Boot 后端
+├─ frontend/             # Vue 3 用户端与管理端
+├─ database/             # 完整 schema、历史 migration、演示数据与清理脚本
+├─ docs/                 # 架构、开发、测试、演示与面试文档
+├─ screenshots/          # 本地验收截图
+├─ .github/workflows/    # CI 与密钥扫描
+├─ compose.yaml          # MySQL / Redis 开发环境
 └─ README.md
 ```
 
-更多结构说明见 [docs/architecture.md](docs/architecture.md)。
+## 快速开始
 
-## 环境要求
+### 1. 准备环境
 
-- Windows 10/11 + PowerShell
-- JDK 17
-- Maven 3.8+
-- Node.js 20 或兼容版本
-- npm
+- Windows 10/11 与 PowerShell
+- JDK 17、Maven 3.8+
+- Node.js 20、npm
 - Docker Desktop
-- MySQL 8.0 和 Redis 7 可通过项目 Compose 启动
 
-当前项目默认端口：
-
-| 服务 | 地址 |
-| --- | --- |
-| 后端 | `http://127.0.0.1:8080` |
-| 前端 | `http://127.0.0.1:5173` |
-| Docker MySQL | `127.0.0.1:13306` |
-| Docker Redis | `127.0.0.1:16379` |
-
-## 环境变量
-
-根目录 `.env.example` 用于 Docker Compose：
-
-```text
-MYSQL_HOST_PORT=13306
-REDIS_HOST_PORT=16379
-MYSQL_PASSWORD=replace_with_a_long_random_password
-MYSQL_ROOT_PASSWORD=replace_with_another_long_random_password
-TZ=Asia/Shanghai
-```
-
-前端 `frontend/.env.example` 用于高德地图：
-
-```text
-VITE_AMAP_KEY=your_amap_js_api_key
-VITE_AMAP_SECURITY_CODE=your_amap_security_js_code
-```
-
-后端常用进程级环境变量：
+### 2. 克隆并进入项目
 
 ```powershell
-$env:MYSQL_HOST="127.0.0.1"
-$env:MYSQL_PORT="13306"
-$env:MYSQL_DATABASE="city_party_platform"
-$env:MYSQL_USERNAME="city_party"
-$env:MYSQL_PASSWORD="你的本地数据库密码"
-$env:REDIS_HOST="127.0.0.1"
-$env:REDIS_PORT="16379"
+git clone https://github.com/Cherry-zr/city-party-platform.git
+Set-Location city-party-platform
 ```
 
-不要提交真实 `.env`、数据库密码、JWT secret、高德 Key、Token、日志或数据库备份。
-
-## Docker MySQL / Redis
-
-本项目的 Compose 只管理 MySQL 和 Redis，不容器化前端或后端。
+### 3. 启动 MySQL 与 Redis
 
 ```powershell
-Set-Location D:\last_one-form-group\city-party-platform
 Copy-Item .env.example .env
 notepad .env
 docker compose config
@@ -131,65 +171,12 @@ docker compose up -d
 docker compose ps
 ```
 
-默认容器：
+首次使用空数据卷时，Compose 会自动导入 `database/schema.sql`。不要再叠加执行历史 `stage2.*-migration.sql`；旧库升级请先阅读[数据库初始化说明](docs/database-initialization.md)。
 
-- `city-party-mysql`
-- `city-party-redis`
-
-默认数据卷：
-
-- `city_party_mysql_data`
-- `city_party_redis_data`
-
-详细说明见 [docs/docker-development.md](docs/docker-development.md)。
-
-## 数据库初始化和 migration
-
-空数据卷首次启动时，Compose 会挂载：
-
-```text
-database/schema.sql -> /docker-entrypoint-initdb.d/001-schema.sql
-```
-
-`database/schema.sql` 是当前完整基线，已经包含 Stage 2.1 到 Stage 2.7 所需结构。空库首次启动不要再叠加执行 `stage2.*-migration.sql`。
-
-旧库升级时，先在仓库外备份，再按真实库状态选择执行：
-
-- `database/stage2.1-migration.sql`
-- `database/stage2.2-migration.sql`
-- `database/stage2.3-migration.sql`
-- `database/stage2.4-migration.sql`
-- `database/stage2.6-migration.sql`
-
-详细说明见 [docs/database-design.md](docs/database-design.md) 和 [docs/development-setup.md](docs/development-setup.md)。
-
-## 导入演示数据
-
-演示数据脚本只处理统一标识的数据：
-
-- 用户名前缀：`cp_demo_`
-- 活动和内容标识：`[CITY_PARTY_DEMO]`
-
-导入：
+### 4. 启动后端
 
 ```powershell
-Set-Location D:\last_one-form-group\city-party-platform
-$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
-cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-data.sql'
-```
-
-清理：
-
-```powershell
-cmd.exe /d /s /c 'docker exec -i city-party-mysql sh -c "MYSQL_PWD=\"$MYSQL_PASSWORD\" exec mysql --default-character-set=utf8mb4 -ucity_party city_party_platform" < database\demo-cleanup.sql'
-```
-
-详细说明见 [docs/demo-guide.md](docs/demo-guide.md)。
-
-## 后端启动
-
-```powershell
-Set-Location D:\last_one-form-group\city-party-platform\backend
+Set-Location backend
 $env:MYSQL_HOST="127.0.0.1"
 $env:MYSQL_PORT="13306"
 $env:MYSQL_DATABASE="city_party_platform"
@@ -200,127 +187,72 @@ $env:REDIS_PORT="16379"
 mvn spring-boot:run
 ```
 
-后端地址：
+后端与接口文档：
 
-```text
-http://127.0.0.1:8080
-```
+- API：`http://127.0.0.1:8080`
+- Knife4j：`http://127.0.0.1:8080/doc.html`
 
-Knife4j：
+### 5. 启动前端
 
-```text
-http://127.0.0.1:8080/doc.html
-```
-
-## 前端启动
+新开一个 PowerShell 窗口：
 
 ```powershell
-Set-Location D:\last_one-form-group\city-party-platform\frontend
+Set-Location city-party-platform\frontend
+Copy-Item .env.example .env.development
+notepad .env.development
 npm ci
 npm run dev
 ```
 
-前端地址：
+访问 `http://127.0.0.1:5173`。地图页面需要在 `frontend/.env.development` 中填写你自己的高德地图 JS API Key 与安全密钥；详细配置和演示数据导入步骤见[本地开发环境说明](docs/development-setup.md)与[演示指南](docs/demo-guide.md)。
 
-```text
-http://127.0.0.1:5173
-```
+> 安全提醒：不要提交真实 `.env`、数据库密码、JWT Secret、高德地图 Key、Token、日志或数据库备份。
 
-Vite 代理：
+## 测试与工程质量
 
-- `/api` -> `http://127.0.0.1:8080`
-- `/uploads` -> `http://127.0.0.1:8080`
-- `/ws` -> `ws://127.0.0.1:8080/ws`
+以下为仓库 `docs/final-acceptance.md` 记录的最终验收结果，不是实时覆盖率或线上运行指标：
 
-## 测试命令
-
-后端：
-
-```powershell
-Set-Location D:\last_one-form-group\city-party-platform\backend
-mvn test
-mvn clean package -DskipTests
-mvn dependency:tree
-```
-
-前端：
-
-```powershell
-Set-Location D:\last_one-form-group\city-party-platform\frontend
-npm ci
-npm run build
-npm run test:e2e
-npm audit
-npm audit --omit=dev
-```
-
-根目录：
-
-```powershell
-Set-Location D:\last_one-form-group\city-party-platform
-docker compose config --quiet
-git diff --check
-git status --short
-```
-
-阶段 6 最终验收结果：
-
-- 后端测试：85 个，通过 85，失败 0，错误 0，跳过 0。
-- Playwright：2 个，通过 2，失败 0。
-- 前端构建：通过，Vite 转换模块 2530。
-
-详细说明见 [docs/testing-guide.md](docs/testing-guide.md)。
-
-## 演示步骤
-
-1. 启动 Docker MySQL / Redis。
-2. 导入演示数据。
-3. 启动后端。
-4. 启动前端。
-5. 使用演示管理员登录后台。
-6. 访问 `/admin/dashboard` 查看运营概览。
-7. 访问 `/admin/analytics` 查看数据分析。
-8. 使用普通演示用户访问用户端活动列表、详情、发布、编辑、取消、结束等流程。
-
-完整步骤见 [docs/demo-guide.md](docs/demo-guide.md)。
-
-## 截图
-
-安全截图保存在 `screenshots/`，已检查不包含密码、JWT、数据库凭据、高德 Key 或私人联系方式。
-
-| 页面 | 截图 |
+| 验证项 | 最终验收记录 |
 | --- | --- |
-| 管理员运营概览 | `screenshots/stage2.7-admin-overview.png` |
-| 管理员数据分析 | `screenshots/stage2.7-admin-analytics.png` |
-| 登录安全 | `screenshots/stage2.6-login-security.png` |
-| 数据库唯一索引 | `screenshots/stage2.6-db-unique-index.png` |
-| 后端测试 | `screenshots/stage2.6-backend-tests.png` |
+| 后端测试 | `mvn test`：85 项通过，失败 0、错误 0、跳过 0 |
+| 后端打包 | `mvn clean package -DskipTests`：通过 |
+| 前端构建 | `npm ci` 与 `npm run build`：通过 |
+| Playwright | 2 个冒烟用例通过，失败 0 |
+| Docker Compose | 配置检查通过；空数据卷由完整 schema 初始化 |
+| 演示数据 | 支持按统一标识重复导入和定向清理 |
+| CI 与安全扫描 | GitHub Actions CI、Security Scan 成功；Gitleaks 最终验收未发现泄漏 |
 
-## 安全说明
+自动化工作流：
 
-- JWT 只保存用户 ID、用户名、角色和过期时间；HTTP 拦截器和 WebSocket 握手会重新查询数据库用户状态和角色。
-- 新注册密码使用 PBKDF2；旧 SHA-256 哈希在登录成功后自动升级。
-- `/api/admin/**` 后端强制要求当前数据库用户仍为 `ADMIN` 且状态为 `NORMAL`。
-- 报名通过数据库唯一约束和条件更新减少重复报名和并发超员。
-- 文件上传校验扩展名和文件头，只允许 JPG、PNG、WebP。
-- 首页数据看板概览使用 Redis 5 分钟缓存；Redis 异常时回退数据库。
-- CI 中增加 Gitleaks 扫描，发现疑似真实密钥时工作流失败。
+- [`CI`](.github/workflows/ci.yml)：运行后端测试、后端打包、前端依赖安装与构建。
+- [`Security Scan`](.github/workflows/security-scan.yml)：使用 Gitleaks 扫描完整可见 Git 历史。
+
+复现方式和 E2E 环境变量要求见[测试体系说明](docs/testing-guide.md)，历史结果与截图索引见[最终验收记录](docs/final-acceptance.md)。
+
+## 项目文档
+
+| 文档 | 内容 |
+| --- | --- |
+| [本地开发环境](docs/development-setup.md) | Windows、Docker、后端、前端与地图配置 |
+| [系统架构](docs/architecture.md) | 前后端分层、请求链路、WebSocket 与存储组件 |
+| [核心业务流程](docs/business-flows.md) | 注册登录、报名候补、互评信用、群聊和看板流程 |
+| [数据库设计](docs/database-design.md) / [初始化说明](docs/database-initialization.md) | 表结构、约束、完整基线与旧库升级边界 |
+| [Docker 开发环境](docs/docker-development.md) | MySQL/Redis 容器、端口、数据卷与初始化机制 |
+| [演示指南](docs/demo-guide.md) | 演示数据导入、清理和推荐演示路径 |
+| [测试体系](docs/testing-guide.md) / [最终验收](docs/final-acceptance.md) | 测试命令、历史结果、依赖审计和截图索引 |
+| [API 概览](docs/api-overview.md) | REST API、WebSocket 与管理员接口概览 |
+| [安全与并发设计](docs/security-and-concurrency.md) | JWT 复核、密码升级、文件校验、报名并发和 Redis 回退 |
+| [简历项目描述](docs/resume-project-description.md) / [面试问答](docs/interview-guide.md) | 简历表述、技术取舍与面试讲解材料 |
 
 ## 已知限制
 
-- 目前没有公网部署。
-- AA 账单、固定搭子、举报处理仍是预留或基础结构。
-- 数据看板只缓存首页概览，关键业务写入后的主动失效尚未统一接入。
-- `echarts` 存在 production moderate 级别依赖审计提示，兼容修复需要评估 ECharts 6 升级。
-- `vite` / `esbuild` 存在开发依赖审计提示，后续可结合构建链升级统一处理。
-- GitHub Actions 当前成功，但 GitHub 平台提示 Node.js 20 action runtime 未来弃用 warning，后续可按平台建议升级。
+- 项目暂未公网部署，仅提供本地运行与演示流程。
+- AA 账单、固定搭子和举报处理仍为预留或基础结构，不描述为已完成业务闭环。
+- 管理员看板目前只缓存首页概览，关键业务写入后的统一主动失效仍可继续优化。
+- 当前前端依赖审计包含 ECharts、Vite、esbuild 的非阻塞提示，大版本修复需要单独评估兼容性。
+- 现有构建包含主 chunk 体积等非阻塞 warning；详见[测试体系说明](docs/testing-guide.md)。
+- 仓库当前未提供开源许可证，本轮不新增 License 文件。
 
-## 后续公开部署方向
+---
 
-- 独立生成生产环境 JWT secret、数据库密码和地图 Key。
-- 禁用或删除演示账号。
-- 使用 HTTPS、反向代理和域名。
-- 对上传目录接入对象存储或静态资源服务。
-- 按公网环境配置 CORS 和 WebSocket Origin。
-- 接入日志脱敏、备份策略、监控告警和依赖升级计划。
-- 重新执行 Gitleaks、npm audit、Maven dependency 审计和全量测试。
+如果你准备将项目用于答辩或面试，建议先按[演示指南](docs/demo-guide.md)完成一次本地初始化，再结合[简历项目描述](docs/resume-project-description.md)与[面试问答](docs/interview-guide.md)准备讲解。
