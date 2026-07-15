@@ -12,12 +12,18 @@ export function getActivity(id) {
   return request.get(`/api/activities/${id}`)
 }
 
-export function createActivity(data) {
-  return request.post('/api/activities', data)
+export function createActivity(data, media) {
+  if (media === undefined) {
+    return request.post('/api/activities', data)
+  }
+  return request.post('/api/activities', buildActivityFormData(data, media))
 }
 
-export function updateActivity(id, data) {
-  return request.put(`/api/activities/${id}`, data)
+export function updateActivity(id, data, media) {
+  if (media === undefined) {
+    return request.put(`/api/activities/${id}`, data)
+  }
+  return request.put(`/api/activities/${id}`, buildActivityFormData(data, media))
 }
 
 export function cancelActivity(id) {
@@ -46,4 +52,16 @@ export function cancelWaitlist(id) {
 
 export function activityWaitlist(id, params) {
   return request.get(`/api/activities/${id}/waitlist`, { params })
+}
+
+function buildActivityFormData(data, media = {}) {
+  const form = new FormData()
+  form.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }), 'activity.json')
+  if (media.coverFile) {
+    form.append('cover', media.coverFile)
+  }
+  if (media.removeCover) {
+    form.append('removeCover', 'true')
+  }
+  return form
 }

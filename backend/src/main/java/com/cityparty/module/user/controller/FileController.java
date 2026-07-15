@@ -30,11 +30,19 @@ public class FileController {
     @Operation(summary = "上传用户头像")
     @PostMapping("/upload/avatar")
     public Result<Map<String, String>> uploadAvatar(@RequestParam("file") MultipartFile file) {
+        Long userId = UserContext.getUserId();
+        String previousUrl = userService.getMe(userId).getAvatarUrl();
         String url = fileUploadUtils.upload(file, uploadProperties.getAvatarDir());
-        UpdateProfileDTO dto = new UpdateProfileDTO();
-        dto.setAvatarUrl(url);
-        userService.updateProfile(UserContext.getUserId(), dto);
-        return Result.ok(Map.of("url", url));
+        try {
+            UpdateProfileDTO dto = new UpdateProfileDTO();
+            dto.setAvatarUrl(url);
+            userService.updateProfile(userId, dto);
+            fileUploadUtils.deleteManagedFile(previousUrl, uploadProperties.getAvatarDir());
+            return Result.ok(Map.of("url", url));
+        } catch (RuntimeException e) {
+            fileUploadUtils.deleteManagedFile(url, uploadProperties.getAvatarDir());
+            throw e;
+        }
     }
 
     @Operation(summary = "上传活动封面")

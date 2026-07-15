@@ -9,6 +9,7 @@ public class UpdateProfileDTO {
 
     private String nickname;
     private String avatarUrl;
+    private Boolean removeAvatar;
     private String city;
     private String bio;
     private List<String> interestTags;

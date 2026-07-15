@@ -115,7 +115,9 @@ public class UserService {
         if (StringUtils.hasText(dto.getNickname())) {
             profile.setNickname(dto.getNickname());
         }
-        if (StringUtils.hasText(dto.getAvatarUrl())) {
+        if (Boolean.TRUE.equals(dto.getRemoveAvatar())) {
+            profile.setAvatarUrl(null);
+        } else if (StringUtils.hasText(dto.getAvatarUrl())) {
             profile.setAvatarUrl(dto.getAvatarUrl());
         }
         if (StringUtils.hasText(dto.getCity())) {

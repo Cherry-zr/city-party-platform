@@ -7,6 +7,7 @@ import com.cityparty.module.review.mapper.ActivityReviewMapper;
 import com.cityparty.module.signup.mapper.ActivitySignupMapper;
 import com.cityparty.module.user.entity.User;
 import com.cityparty.module.user.entity.UserProfile;
+import com.cityparty.module.user.dto.UpdateProfileDTO;
 import com.cityparty.module.user.mapper.InterestTagMapper;
 import com.cityparty.module.user.mapper.UserInterestMapper;
 import com.cityparty.module.user.mapper.UserMapper;
@@ -24,6 +25,7 @@ import java.util.Collections;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -83,5 +85,30 @@ class UserServiceTest {
         assertThat(overview.getReceivedReviewCount()).isEqualTo(4L);
         assertThat(overview.getAverageRating()).isEqualByComparingTo("4.3");
         assertThat(overview.getUnreadNoticeCount()).isEqualTo(5L);
+    }
+
+    @Test
+    void removesAvatarOnlyWhenExplicitlyRequested() {
+        User user = new User();
+        user.setId(2L);
+        user.setUsername("user01");
+        user.setDeleted(0);
+        UserProfile profile = new UserProfile();
+        profile.setId(5L);
+        profile.setUserId(2L);
+        profile.setNickname("User 01");
+        profile.setAvatarUrl("/uploads/avatar/11111111-1111-1111-1111-111111111111.jpg");
+        profile.setDeleted(0);
+        when(userMapper.selectById(2L)).thenReturn(user);
+        when(userProfileMapper.selectOne(any())).thenReturn(profile);
+        when(userInterestMapper.selectList(any())).thenReturn(Collections.emptyList());
+        UpdateProfileDTO dto = new UpdateProfileDTO();
+        dto.setRemoveAvatar(true);
+
+        var updated = userService.updateProfile(2L, dto);
+
+        assertThat(updated.getAvatarUrl()).isNull();
+        assertThat(profile.getAvatarUrl()).isNull();
+        verify(userProfileMapper).updateById(profile);
     }
 }

@@ -281,3 +281,167 @@ test('admin dashboard, analytics ranges and user route guard', async ({ page, re
   await userPage.close()
   expect(consoleMessages).toEqual([])
 })
+
+test('image cropper submits and removes activity covers and profile avatars', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  const activityRequests = []
+  const profileRequests = []
+  let profileFailuresRemaining = 1
+  let currentAvatar = null
+  const activity = {
+    id: 501,
+    creatorId: 1,
+    title: 'Image Cropper Activity',
+    category: '观影',
+    tags: ['图片测试'],
+    startTime: '2026-08-01T19:00:00',
+    endTime: '2026-08-01T22:00:00',
+    signupDeadline: '2026-08-01T12:00:00',
+    city: '北京',
+    address: '图片测试地点',
+    longitude: 116.4,
+    latitude: 39.9,
+    minParticipants: 2,
+    maxParticipants: 6,
+    costType: 'FREE',
+    costAmount: 0,
+    aaRule: '',
+    coverUrl: '/uploads/activity/existing.jpg',
+    description: '图片裁剪端到端测试',
+    notes: '',
+    needApproval: false,
+    approvedCount: 0,
+    status: 'SIGNING',
+    creator: { id: 1, nickname: 'Image User', avatarUrl: null }
+  }
+
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+    const method = request.method()
+    let data = { records: [], total: 0 }
+
+    if (pathname === '/api/notices/unread-count') {
+      data = 0
+    } else if (pathname === '/api/activities' && method === 'POST') {
+      activityRequests.push(request.postDataBuffer())
+      data = { ...activity, coverUrl: '/uploads/activity/new-cover.jpg' }
+    } else if (pathname === '/api/activities/501' && method === 'PUT') {
+      activityRequests.push(request.postDataBuffer())
+      data = { ...activity, coverUrl: null }
+    } else if (pathname === '/api/activities/501') {
+      data = activity
+    } else if (pathname === '/api/user/profile' && method === 'PUT') {
+      profileRequests.push(request.postDataBuffer())
+      if (profileFailuresRemaining > 0) {
+        profileFailuresRemaining -= 1
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ code: 500, message: 'mock profile save failure', data: null })
+        })
+        return
+      }
+      const body = request.postDataBuffer()?.toString('latin1') || ''
+      currentAvatar = body.includes('removeAvatar') ? null : '/uploads/avatar/new-avatar.jpg'
+      data = userData(currentAvatar)
+    } else if (pathname === '/api/user/me') {
+      data = userData(currentAvatar)
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data })
+    })
+  })
+
+  await seedSession(page, {
+    token: 'image-feature-token',
+    user: userData(null)
+  })
+
+  await page.goto('/publish')
+  await page.locator('.van-field', { hasText: '标题' }).locator('input').fill(activity.title)
+  await page.locator('.van-field', { hasText: '地址' }).locator('input').fill(activity.address)
+  await page.locator('.van-field', { hasText: '说明' }).locator('textarea').fill(activity.description)
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'unsupported.gif',
+    mimeType: 'image/gif',
+    buffer: Buffer.from('GIF89a')
+  })
+  await expect(page.locator('.van-toast')).toContainText('仅支持 JPG、PNG、WebP')
+  await page.locator('input[type="file"]').setInputFiles({
+    name: 'too-large.png',
+    mimeType: 'image/png',
+    buffer: Buffer.alloc(10 * 1024 * 1024 + 1)
+  })
+  await expect(page.locator('.van-toast')).toContainText('原图不能超过 10MB')
+  await page.locator('input[type="file"]').setInputFiles(testPngFile('cover.png'))
+  await expect(page.locator('cropper-selection')).toBeVisible()
+  await page.locator('.van-nav-bar__right').getByText('确定', { exact: true }).click()
+  await expect(page.locator('.activity-cover-preview')).toHaveAttribute('src', /^blob:/)
+  const firstCoverPreview = await page.locator('.activity-cover-preview').getAttribute('src')
+  await page.locator('input[type="file"]').setInputFiles(testPngFile('replacement-cover.png'))
+  await expect(page.locator('cropper-selection')).toBeVisible()
+  await page.locator('.van-nav-bar__left').getByText('取消', { exact: true }).click()
+  await expect(page.locator('.activity-cover-preview')).toHaveAttribute('src', firstCoverPreview)
+  await page.locator('input[type="file"]').setInputFiles(testPngFile('replacement-cover.png'))
+  await expect(page.locator('cropper-selection')).toBeVisible()
+  await page.locator('.van-nav-bar__right').getByText('确定', { exact: true }).click()
+  await expect.poll(() => page.locator('.activity-cover-preview').getAttribute('src')).not.toBe(firstCoverPreview)
+  await page.locator('form .van-button--block').click()
+  await expect.poll(() => activityRequests.length).toBe(1)
+  const createBody = activityRequests[0].toString('latin1')
+  expect(createBody).toContain('activity-cover.jpg')
+  expect(createBody).toContain('Image Cropper Activity')
+
+  await page.goto('/publish?editId=501')
+  await expect(page.locator('.activity-cover-preview')).toHaveAttribute('src', activity.coverUrl)
+  await page.getByRole('button', { name: '删除图片' }).click()
+  await page.locator('form .van-button--block').click()
+  await expect.poll(() => activityRequests.length).toBe(2)
+  expect(activityRequests[1].toString('latin1')).toContain('removeCover')
+
+  await page.goto('/profile/edit')
+  await page.locator('input[type="file"]').setInputFiles(testPngFile('avatar.png'))
+  await expect(page.locator('cropper-selection')).toBeVisible()
+  await page.locator('.van-nav-bar__right').getByText('确定', { exact: true }).click()
+  await expect(page.locator('.avatar-editor-preview')).toHaveAttribute('src', /^blob:/)
+  await page.locator('form .van-button--block').click()
+  await expect.poll(() => profileRequests.length).toBe(1)
+  expect(profileRequests[0].toString('latin1')).toContain('avatar.jpg')
+  await expect(page.locator('.avatar-editor-preview')).toHaveAttribute('src', /^blob:/)
+  await page.locator('form .van-button--block').click()
+  await expect.poll(() => profileRequests.length).toBe(2)
+  expect(profileRequests[1].toString('latin1')).toContain('avatar.jpg')
+
+  await page.getByRole('button', { name: '删除头像' }).click()
+  await page.locator('form .van-button--block').click()
+  await expect.poll(() => profileRequests.length).toBe(3)
+  expect(profileRequests[2].toString('latin1')).toContain('removeAvatar')
+})
+
+function userData(avatarUrl) {
+  return {
+    id: 1,
+    username: 'image_user',
+    nickname: 'Image User',
+    role: 'USER',
+    city: '北京',
+    bio: 'Image feature test user',
+    interestTags: [],
+    avatarUrl
+  }
+}
+
+function testPngFile(name) {
+  return {
+    name,
+    mimeType: 'image/png',
+    buffer: Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      'base64'
+    )
+  }
+}

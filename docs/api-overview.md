@@ -29,6 +29,12 @@ Authorization: Bearer <token>
 - `PUT /api/user/profile`
 - `GET /api/users/{id}/public-profile`
 
+`PUT /api/user/profile` 同时支持 JSON 和 `multipart/form-data`。带裁剪头像时提交：
+
+- `data`：`application/json` 的用户资料。
+- `avatar`：可选的 `512×512` JPEG 文件。
+- `removeAvatar`：可选布尔值，设为 `true` 时删除当前头像；不能与 `avatar` 同时提交。
+
 ### Profile Overview
 
 `GET /api/user/profile-overview` 聚合当前登录用户的个人中心数据：
@@ -43,6 +49,8 @@ Authorization: Bearer <token>
 
 - `POST /api/file/upload/avatar`
 - `POST /api/file/upload/activity-cover`
+
+以上独立上传接口为旧调用保留。移动端表单使用下方的 multipart 保存接口，使图片与业务数据在一次请求内完成关联。
 
 ## Activity
 
@@ -61,6 +69,14 @@ Authorization: Bearer <token>
 - `GET /api/activities/{activityId}/chat/access`
 - `GET /api/activities/{activityId}/chat/messages`
 - `POST /api/activities/{activityId}/chat/messages`
+
+`POST /api/activities` 和 `PUT /api/activities/{id}` 同时支持 JSON 和 `multipart/form-data`。Multipart 请求包含：
+
+- `data`：`application/json` 的活动数据。
+- `cover`：可选的 `1200×500` JPEG 文件。
+- `removeCover`：仅编辑时可选；设为 `true` 时删除当前封面，不能与 `cover` 同时提交。
+
+编辑时既不上传 `cover` 也不设置 `removeCover`，会保留原封面。发布时不上传封面则使用前端默认图。
 
 ### Nearby Activity
 

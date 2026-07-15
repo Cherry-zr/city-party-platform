@@ -8,8 +8,19 @@ export function getProfileOverview() {
   return request.get('/api/user/profile-overview')
 }
 
-export function updateProfile(data) {
-  return request.put('/api/user/profile', data)
+export function updateProfile(data, media) {
+  if (media === undefined) {
+    return request.put('/api/user/profile', data)
+  }
+  const form = new FormData()
+  form.append('data', new Blob([JSON.stringify(data)], { type: 'application/json' }), 'profile.json')
+  if (media.avatarFile) {
+    form.append('avatar', media.avatarFile)
+  }
+  if (media.removeAvatar) {
+    form.append('removeAvatar', 'true')
+  }
+  return request.put('/api/user/profile', form)
 }
 
 export function getPublicProfile(id) {

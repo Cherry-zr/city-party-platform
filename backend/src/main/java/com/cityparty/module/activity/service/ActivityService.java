@@ -56,10 +56,7 @@ public class ActivityService {
 
     @Transactional(rollbackFor = Exception.class)
     public ActivityVO create(ActivityCreateDTO dto) {
-        validateSchedule(dto);
-        if (dto.getMaxParticipants() < dto.getMinParticipants()) {
-            throw new BusinessException("最大人数不能小于最小人数");
-        }
+        validateCreateRequest(dto);
         LocalDateTime now = LocalDateTime.now();
         Activity activity = new Activity();
         activity.setCreatorId(UserContext.getUserId());
@@ -165,18 +162,7 @@ public class ActivityService {
 
     @Transactional(rollbackFor = Exception.class)
     public ActivityVO update(Long id, ActivityCreateDTO dto) {
-        Activity activity = requireActivity(id);
-        ensureCanManage(activity);
-        if ("CANCELLED".equals(activity.getStatus()) || "FINISHED".equals(activity.getStatus())) {
-            throw new BusinessException("Activity cannot be edited after cancel or finish.");
-        }
-        validateSchedule(dto);
-        if (dto.getMaxParticipants() < dto.getMinParticipants()) {
-            throw new BusinessException("Max participants cannot be less than min participants.");
-        }
-        if (dto.getMaxParticipants() < activity.getApprovedCount()) {
-            throw new BusinessException("Max participants cannot be less than approved count.");
-        }
+        Activity activity = validateUpdateRequest(id, dto);
         LocalDateTime now = LocalDateTime.now();
         activity.setTitle(dto.getTitle());
         activity.setCategory(dto.getCategory());
@@ -263,6 +249,22 @@ public class ActivityService {
         if (activity == null || Integer.valueOf(1).equals(activity.getDeleted())) {
             throw new BusinessException("活动不存在");
         }
+        return activity;
+    }
+
+    public void validateCreateRequest(ActivityCreateDTO dto) {
+        validateSchedule(dto);
+        validateParticipantLimits(dto, null);
+    }
+
+    public Activity validateUpdateRequest(Long id, ActivityCreateDTO dto) {
+        Activity activity = requireActivity(id);
+        ensureCanManage(activity);
+        if ("CANCELLED".equals(activity.getStatus()) || "FINISHED".equals(activity.getStatus())) {
+            throw new BusinessException("Activity cannot be edited after cancel or finish.");
+        }
+        validateSchedule(dto);
+        validateParticipantLimits(dto, activity);
         return activity;
     }
 
@@ -360,6 +362,18 @@ public class ActivityService {
         }
         if (dto.getSignupDeadline().isAfter(dto.getStartTime())) {
             throw new BusinessException("Signup deadline cannot be after activity start time.");
+        }
+    }
+
+    private void validateParticipantLimits(ActivityCreateDTO dto, Activity current) {
+        if (dto.getMinParticipants() == null || dto.getMaxParticipants() == null) {
+            throw new BusinessException("Min participants and max participants are required.");
+        }
+        if (dto.getMaxParticipants() < dto.getMinParticipants()) {
+            throw new BusinessException("Max participants cannot be less than min participants.");
+        }
+        if (current != null && dto.getMaxParticipants() < current.getApprovedCount()) {
+            throw new BusinessException("Max participants cannot be less than approved count.");
         }
     }
 
