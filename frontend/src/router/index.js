@@ -37,7 +37,7 @@ const routes = [
     path: '/',
     component: MobileLayout,
     children: [
-      { path: '', component: Home, meta: { public: true } },
+      { path: '', name: 'mobile-home', component: Home, meta: { public: true } },
       { path: 'activities/:id', component: ActivityDetail, meta: { public: true } },
       { path: 'activities/:id/chat', component: ActivityChat },
       { path: 'activities/:id/reviews', component: ActivityReviews },

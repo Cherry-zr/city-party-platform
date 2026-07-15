@@ -61,6 +61,38 @@ async function silenceBrowserDefaultRequests(page) {
   await page.route('**/favicon.ico', (route) => route.fulfill({ status: 204, body: '' }))
 }
 
+async function mockMobileNavigationApis(page) {
+  await page.route(/^https?:\/\/[^/]+\/api\//, (route) => {
+    const pathname = new URL(route.request().url()).pathname
+    let data = { records: [], total: 0 }
+
+    if (pathname === '/api/notices/unread-count') {
+      data = 0
+    } else if (pathname === '/api/user/profile-overview') {
+      data = {
+        username: 'navigation_user',
+        nickname: 'Navigation User',
+        city: 'Beijing',
+        creditScore: 100,
+        creditLevel: 'GOOD',
+        publishedActivityCount: 0,
+        joinedActivityCount: 0,
+        waitingActivityCount: 0,
+        receivedReviewCount: 0,
+        averageRating: 0,
+        unreadNoticeCount: 0,
+        interestTags: []
+      }
+    }
+
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data })
+    })
+  })
+}
+
 function activityPayload(title, started = false) {
   const now = new Date()
   const start = started
@@ -136,6 +168,80 @@ test('login, activity list, detail, publish, edit, cancel and finish flow', asyn
   const finished = await apiOk(request, 'GET', `/api/activities/${started.id}`)
   expect(finished.status).toBe('FINISHED')
   expect(consoleMessages).toEqual([])
+})
+
+test('mobile tabbar navigation and active state follow current route', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  await mockMobileNavigationApis(page)
+  await seedSession(page, {
+    token: 'e2e-navigation-token',
+    user: {
+      id: 1,
+      username: 'navigation_user',
+      nickname: 'Navigation User',
+      role: 'USER',
+      city: 'Beijing'
+    }
+  })
+
+  const tabbar = page.locator('.van-tabbar')
+  const tabs = [
+    { label: '首页', path: '/' },
+    { label: '地图', path: '/map' },
+    { label: '发布', path: '/publish' },
+    { label: '报名', path: '/my-signups' },
+    { label: '我的', path: '/profile' }
+  ]
+
+  const expectPath = async (path) => {
+    await expect.poll(() => new URL(page.url()).pathname).toBe(path)
+  }
+  const getTab = (label) => tabbar.locator('[role="tab"]', { hasText: label })
+  const expectOnlyActiveTab = async (label) => {
+    const activeTabs = tabbar.locator('[role="tab"][aria-selected="true"]')
+    await expect(activeTabs).toHaveCount(1)
+    await expect(getTab(label)).toHaveAttribute('aria-selected', 'true')
+  }
+
+  for (const tab of tabs) {
+    await page.goto(tab.path)
+    await expectPath(tab.path)
+    await expectOnlyActiveTab(tab.label)
+  }
+
+  for (const tab of tabs.slice(1)) {
+    await page.goto(tab.path)
+    await getTab('首页').click()
+    await expectPath('/')
+    await expectOnlyActiveTab('首页')
+  }
+
+  await page.goto('/')
+  for (const tab of tabs.slice(1)) {
+    await getTab(tab.label).click()
+    await expectPath(tab.path)
+    await expectOnlyActiveTab(tab.label)
+  }
+
+  await getTab('首页').click()
+  await expectPath('/')
+  await expectOnlyActiveTab('首页')
+
+  await page.goBack()
+  await expectPath('/profile')
+  await expectOnlyActiveTab('我的')
+
+  await page.goForward()
+  await expectPath('/')
+  await expectOnlyActiveTab('首页')
+
+  await page.reload()
+  await expectPath('/')
+  await expectOnlyActiveTab('首页')
+
+  await getTab('首页').click()
+  await expectPath('/')
+  await expectOnlyActiveTab('首页')
 })
 
 test('admin dashboard, analytics ranges and user route guard', async ({ page, request }) => {
