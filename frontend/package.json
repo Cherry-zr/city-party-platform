@@ -7,7 +7,10 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "showcase:seed": "node scripts/manage-showcase-data.mjs seed",
+    "showcase:cleanup": "node scripts/manage-showcase-data.mjs cleanup",
+    "capture:showcase": "node scripts/capture-showcase.mjs"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",

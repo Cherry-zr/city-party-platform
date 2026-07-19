@@ -45,28 +45,29 @@
 
 ## 功能演示
 
-以下均为仓库中的本地验收截图，页面数据为演示或测试数据，不代表线上运营情况。
+以下截图由独立的本地展示数据生成，不包含真实用户或线上运营数据。截图脚本会隔离本机其他验收记录，并在地图、图片、字体、接口与图表未就绪时主动失败。
 
 <table>
   <tr>
     <td align="center"><strong>活动首页</strong></td>
-    <td align="center"><strong>报名与候补详情</strong></td>
+    <td align="center"><strong>附近活动地图</strong></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/stage1.1-home.png" alt="移动端活动首页" width="300" /></td>
-    <td align="center"><img src="screenshots/stage2.1-waitlist.png" alt="活动详情与候补信息" width="300" /></td>
+    <td align="center"><img src="screenshots/showcase/mobile-home.png" alt="本地展示数据生成的移动端活动首页" width="300" /></td>
+    <td align="center"><img src="screenshots/showcase/mobile-map.png" alt="道路、地名、地图瓦片与活动标记均已加载的附近活动地图" width="300" /></td>
   </tr>
 </table>
 
-<details open>
-  <summary><strong>附近活动地图</strong></summary>
-  <br />
-  <img src="screenshots/stage2.1-map.png" alt="地图附近活动与距离筛选" width="320" />
-</details>
-
-<p><strong>WebSocket 活动群聊</strong></p>
-
-<img src="screenshots/stage2.2-chat.png" alt="WebSocket 活动群聊" width="760" />
+<table>
+  <tr>
+    <td align="center"><strong>活动详情与报名状态</strong></td>
+    <td align="center"><strong>WebSocket 活动群聊</strong></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/showcase/mobile-activity-detail.png" alt="移动端活动详情和报名状态" width="300" /></td>
+    <td align="center"><img src="screenshots/showcase/mobile-chat.png" alt="移动端 WebSocket 活动群聊" width="300" /></td>
+  </tr>
+</table>
 
 <table>
   <tr>
@@ -74,12 +75,12 @@
     <td align="center"><strong>管理员数据分析</strong></td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/stage2.7-admin-overview.png" alt="管理员运营概览" width="560" /></td>
-    <td align="center"><img src="screenshots/stage2.7-admin-analytics.png" alt="管理员数据分析" width="560" /></td>
+    <td align="center"><img src="screenshots/showcase/admin-dashboard.png" alt="本地展示数据生成的管理员运营概览" width="560" /></td>
+    <td align="center"><img src="screenshots/showcase/admin-analytics.png" alt="本地展示数据生成的管理员数据分析" width="560" /></td>
   </tr>
 </table>
 
-其余页面、测试与数据库验收截图可在 [`screenshots/`](screenshots/) 中查看。
+本轮共保留 10 张经过检查的原始展示截图；候补、通知、信用记录和活动管理等补充页面可在 [`screenshots/showcase/`](screenshots/showcase/) 中查看。数据导入、定向清理和截图命令分别为 `npm run showcase:seed`、`npm run showcase:cleanup` 与 `npm run capture:showcase`，均从 `frontend/` 目录运行。
 
 ## 核心业务流程
 
