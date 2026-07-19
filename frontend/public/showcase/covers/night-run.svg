@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="title desc">
+  <title id="title">公园轻松夜跑</title>
+  <desc id="desc">月亮、跑道和运动轨迹组成的原创抽象封面</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#17233f"/>
+      <stop offset="1" stop-color="#324f61"/>
+    </linearGradient>
+    <linearGradient id="track" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7ee0bf"/>
+      <stop offset="1" stop-color="#f2cc7b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="500" fill="url(#bg)"/>
+  <circle cx="1030" cy="92" r="58" fill="#f7dfa8"/>
+  <circle cx="1054" cy="73" r="58" fill="#263d56"/>
+  <path d="M660 396c132-164 294-205 474-115M703 444c126-135 276-162 430-80" fill="none" stroke="url(#track)" stroke-width="18" stroke-linecap="round"/>
+  <path d="M854 149l55 44-32 70 67 63M909 193l67-24M877 263l-80 48M944 326l-9 92" fill="none" stroke="#f5f1df" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="854" cy="112" r="29" fill="#f5f1df"/>
+  <g fill="#8cd8c0" opacity=".7"><circle cx="704" cy="88" r="5"/><circle cx="760" cy="132" r="4"/><circle cx="1120" cy="172" r="5"/><circle cx="1000" cy="210" r="3"/></g>
+  <text x="78" y="185" fill="#eef7f2" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="60" font-weight="700">公园轻松夜跑</text>
+  <text x="80" y="246" fill="#8ed8c1" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="24" letter-spacing="4">EASY NIGHT RUN</text>
+  <path d="M80 316h390" stroke="#6c9d98" stroke-width="3"/>
+  <text x="80" y="370" fill="#d1e2de" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="25">五公里 · 轻松配速 · 跑后拉伸</text>
+</svg>

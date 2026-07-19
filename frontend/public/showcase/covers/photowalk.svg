@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="title desc">
+  <title id="title">城市摄影漫步</title>
+  <desc id="desc">城市天际线和相机取景框组成的原创抽象封面</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ece8f5"/>
+      <stop offset=".55" stop-color="#d9b7b0"/>
+      <stop offset="1" stop-color="#876e88"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="500" fill="url(#sky)"/>
+  <circle cx="974" cy="112" r="68" fill="#f6d69b" opacity=".9"/>
+  <path d="M670 355V182h72v173h42V124h84v231h44V205h58v150h38V162h74v193h58v145H650V355z" fill="#4c465d" opacity=".86"/>
+  <path d="M692 277h424M778 145v310M995 185v270" stroke="#eadde4" stroke-width="3" opacity=".55"/>
+  <rect x="735" y="70" width="360" height="308" rx="30" fill="none" stroke="#fff7ef" stroke-width="12"/>
+  <path d="M735 150h-38v-42h38M1095 150h38v-42h-38M735 298h-38v42h38M1095 298h38v42h-38" fill="none" stroke="#fff7ef" stroke-width="12"/>
+  <text x="78" y="185" fill="#3c3448" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="60" font-weight="700">城市摄影漫步</text>
+  <text x="80" y="245" fill="#66586f" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="24" letter-spacing="4">CITY PHOTO WALK</text>
+  <path d="M80 316h395" stroke="#8a748a" stroke-width="3"/>
+  <text x="80" y="369" fill="#594b61" font-family="Segoe UI, Microsoft YaHei, sans-serif" font-size="25">城市中轴 · 日落光影 · 轻量漫步</text>
+</svg>
