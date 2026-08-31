@@ -31,6 +31,7 @@ city-party-platform/
 - `common/security`：JWT、当前用户上下文和 HTTP 拦截器。
 - `common/websocket`：WebSocket 握手鉴权、在线会话、实时通知和群聊推送。
 - `common/utils`：密码、分页、文件上传等工具。
+- `module/recommendation`：候选召回、纯特征评分、稳定排序、推荐理由和 Redis 缓存。
 
 ## 前端结构
 
@@ -68,6 +69,22 @@ Mapper / MySQL / Redis
   ↓
 Result<T> 统一响应
 ```
+
+个性化推荐链路仍在当前单体应用内，不是独立微服务：
+
+```text
+Vue Home
+  ↓
+RecommendationController
+  ↓
+RecommendationService
+  ↓
+RecommendationScorer
+  ↓
+MySQL + Redis
+```
+
+`RecommendationService` 从 MySQL 召回最多 100 条原始活动并批量读取发起人，先评分排序，再只对 Top N 执行完整 VO 转换。Redis 仅缓存 5 分钟推荐结果；缓存异常时回退 MySQL 实时计算。
 
 ## WebSocket 链路
 
@@ -113,6 +130,7 @@ Redis：
 - 验证码：`captcha:{key}`。
 - 候补队列：`activity:waitlist:{activityId}`。
 - 看板概览缓存：`city-party:admin:dashboard:overview`。
+- 个性化推荐缓存：`city-party:recommendation:activities:{userId}:{location}:{limit}:{interestFingerprint}`。
 
 ## CI 和安全扫描
 

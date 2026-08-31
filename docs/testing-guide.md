@@ -15,9 +15,9 @@ Set-Location D:\last_one-form-group\city-party-platform\backend
 mvn test
 ```
 
-阶段 6 最终验收结果：
+Stage 2.8 最终验收结果：
 
-- 测试总数：85
+- 测试总数：120
 - 失败：0
 - 错误：0
 - 跳过：0
@@ -44,15 +44,17 @@ mvn test
 - 统计日期校验。
 - Redis 故障回退。
 - 空统计和除零。
+- `RecommendationScorerTest`：兴趣、距离、热度、时间、信用和缺失特征动态权重。
+- `RecommendationServiceTest`：候选过滤、FULL 候补、兴趣/位置排序、冷启动、稳定排序、Top N、Redis 缓存与故障回退。
 
 ## 后端打包
 
 ```powershell
 Set-Location D:\last_one-form-group\city-party-platform\backend
-mvn clean package -DskipTests
+mvn clean package
 ```
 
-阶段 6 最终验收：通过。
+Stage 2.8 最终验收：120 项测试通过并成功生成 JAR。
 
 ## Maven 依赖树
 
@@ -71,15 +73,13 @@ mvn dependency:tree
 
 ```powershell
 Set-Location D:\last_one-form-group\city-party-platform\frontend
-npm ci
 npm run build
 ```
 
-阶段 6 最终验收：
+Stage 2.8 最终验收：
 
-- `npm ci`：通过。
 - `npm run build`：通过。
-- Vite 转换模块：2530。
+- Vite 转换模块：2549。
 
 既存 warning：
 
@@ -118,12 +118,12 @@ $env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:5173"
 
 - 只读流程使用固定演示账号。
 - 写操作创建带统一前缀的唯一活动。
-- 测试结束后只清理本次创建的数据。
-- 不清空数据库。
+- 写操作使用隔离验收数据库，验收后删除本次临时容器。
+- 不清空或清理开发数据库。
 
-阶段 6 最终验收：
+Stage 2.8 最终验收：
 
-- Playwright 用例数：2
+- Playwright 用例数：6
 - 失败：0
 - E2E 临时数据残留：0
 
@@ -142,6 +142,10 @@ $env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:5173"
 - 普通用户后台拦截。
 - 关键元素加载。
 - 明显控制台错误检查。
+- 登录用户首页“为你推荐”、推荐理由和推荐活动详情跳转。
+- 访客首页不展示推荐区且不请求推荐接口。
+- 搜索、分类筛选和定位拒绝不清空推荐结果。
+- 推荐场景通过 mock API 和 WebSocket 隔离，不依赖 CI 的真实定位权限。
 
 ## npm audit
 

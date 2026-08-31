@@ -244,6 +244,130 @@ test('mobile tabbar navigation and active state follow current route', async ({ 
   await expectOnlyActiveTab('首页')
 })
 
+test('guest home keeps the original activity flow without requesting recommendations', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  let recommendationRequests = 0
+
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
+    const pathname = new URL(route.request().url()).pathname
+    if (pathname === '/api/recommendations/activities') {
+      recommendationRequests += 1
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data: { records: [], total: 0 } })
+    })
+  })
+
+  await page.goto('/')
+  await expect(page.getByText('活动发现', { exact: true })).toBeVisible()
+  await expect(page.getByText('为你推荐', { exact: true })).toHaveCount(0)
+  expect(recommendationRequests).toBe(0)
+})
+
+test('logged-in home shows explainable recommendations and opens activity detail', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  await page.addInitScript(() => {
+    window.WebSocket = class MockWebSocket {
+      static CONNECTING = 0
+      static OPEN = 1
+      static CLOSED = 3
+
+      constructor() {
+        this.readyState = MockWebSocket.OPEN
+        queueMicrotask(() => this.onopen?.())
+      }
+
+      send() {}
+
+      close() {
+        this.readyState = MockWebSocket.CLOSED
+        this.onclose?.()
+      }
+    }
+
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition(_success, error) {
+          error({ code: 1, message: 'Permission denied by E2E test' })
+        }
+      }
+    })
+  })
+  const recommendedActivity = {
+    id: 901,
+    creatorId: 88,
+    title: '周末新手桌游局',
+    category: '桌游',
+    tags: ['周末', '新手友好'],
+    startTime: '2026-09-05T14:00:00',
+    endTime: '2026-09-05T17:00:00',
+    signupDeadline: '2026-09-04T20:00:00',
+    city: '北京',
+    address: '朝阳区桌游店',
+    longitude: 116.4,
+    latitude: 39.9,
+    minParticipants: 2,
+    maxParticipants: 8,
+    approvedCount: 3,
+    favoriteCount: 4,
+    waitlistCount: 0,
+    costType: 'AA',
+    costAmount: 45,
+    status: 'SIGNING',
+    creator: { id: 88, nickname: '桌游发起人', avatarUrl: null, creditScore: 108 }
+  }
+
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
+    const pathname = new URL(route.request().url()).pathname
+    let data = { records: [], total: 0 }
+    if (pathname === '/api/recommendations/activities') {
+      data = [{
+        activity: recommendedActivity,
+        recommendationScore: 92.35,
+        distanceKm: null,
+        reasons: ['匹配你的兴趣：周末、新手友好', '近期报名热度较高', '发起人信用良好'],
+        scoreDetail: { interest: 100, distance: null, hotness: 72, time: 88, credit: 96 }
+      }]
+    } else if (pathname === '/api/activities/901') {
+      data = recommendedActivity
+    } else if (pathname === '/api/notices/unread-count') {
+      data = 0
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data })
+    })
+  })
+  await seedSession(page, {
+    token: 'recommendation-feature-token',
+    user: { id: 7, username: 'recommendation_user', nickname: '推荐用户', role: 'USER' }
+  })
+
+  await page.goto('/')
+  await expect(page.getByText('为你推荐', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: '使用位置优化' })).toBeVisible()
+  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+  await expect(page.getByText('匹配你的兴趣：周末、新手友好')).toBeVisible()
+
+  await page.getByPlaceholder('搜索活动、地点、说明').fill('飞盘')
+  await page.getByPlaceholder('搜索活动、地点、说明').press('Enter')
+  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+  await page.getByText('运动', { exact: true }).first().click()
+  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+
+  await page.getByRole('button', { name: '使用位置优化' }).click()
+  await expect(page.locator('.van-toast')).toContainText('未能获取位置，已保留当前推荐')
+  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+
+  await page.locator('.recommendation-item .activity-card').click()
+  await expect(page).toHaveURL('/activities/901')
+})
+
 test('admin dashboard, analytics ranges and user route guard', async ({ page, request }) => {
   const consoleMessages = watchConsole(page)
   await silenceBrowserDefaultRequests(page)

@@ -142,6 +142,20 @@ HTTP 发送请求体：
 }
 ```
 
+## Recommendation
+
+- `GET /api/recommendations/activities`
+
+该接口必须携带有效 JWT，推荐用户只从 `UserContext` 获取，不接受客户端 `userId`。查询参数：
+
+- `longitude`：可选；需要与 `latitude` 同时提供才启用距离特征。
+- `latitude`：可选；需要与 `longitude` 同时提供才启用距离特征。
+- `limit`：可选，默认 `6`，允许范围为 `1` 到 `10`。
+
+返回内容包含完整 `activity`、两位小数 `recommendationScore`、可选 `distanceKm`、最多 3 条真实计算理由，以及 `interest/distance/hotness/time/credit` 评分明细。不可用特征返回 `null`，用于区分“没有该维度数据”和“该维度真实得分为 0”。
+
+用户无兴趣或请求无定位时，服务会移除缺失特征并重新归一权重，仍使用热度、时间和发起人信用完成冷启动排序。结果缓存 5 分钟；Redis 读取、反序列化或写入失败会记录 warning 并回退数据库实时计算。
+
 ## Signup
 
 - `POST /api/activities/{activityId}/signup`

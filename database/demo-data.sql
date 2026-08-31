@@ -48,29 +48,45 @@ INSERT INTO user_profile (user_id,nickname,avatar_url,city,bio,created_at,update
 (@member_b,'演示成员 B',NULL,'上海','[CITY_PARTY_DEMO] 普通参与者',DATE_SUB(NOW(),INTERVAL 3 DAY),NOW(),0),
 (@member_c,'演示成员 C',NULL,'杭州','[CITY_PARTY_DEMO] 普通参与者',DATE_SUB(NOW(),INTERVAL 1 DAY),NOW(),0);
 
-INSERT INTO interest_tag (name,sort_order,created_at) VALUES
-('[CITY_PARTY_DEMO] 周末',901,NOW()),('[CITY_PARTY_DEMO] 新手友好',902,NOW()),('[CITY_PARTY_DEMO] 轻社交',903,NOW());
-SET @tag_weekend=(SELECT id FROM interest_tag WHERE name='[CITY_PARTY_DEMO] 周末');
-SET @tag_beginner=(SELECT id FROM interest_tag WHERE name='[CITY_PARTY_DEMO] 新手友好');
-SET @tag_social=(SELECT id FROM interest_tag WHERE name='[CITY_PARTY_DEMO] 轻社交');
+INSERT INTO interest_tag (name,sort_order,created_at)
+SELECT '周末',100,NOW() WHERE NOT EXISTS (SELECT 1 FROM interest_tag WHERE name='周末');
+INSERT INTO interest_tag (name,sort_order,created_at)
+SELECT '新手友好',110,NOW() WHERE NOT EXISTS (SELECT 1 FROM interest_tag WHERE name='新手友好');
+INSERT INTO interest_tag (name,sort_order,created_at)
+SELECT '轻社交',120,NOW() WHERE NOT EXISTS (SELECT 1 FROM interest_tag WHERE name='轻社交');
+INSERT INTO interest_tag (name,sort_order,created_at)
+SELECT '低预算',130,NOW() WHERE NOT EXISTS (SELECT 1 FROM interest_tag WHERE name='低预算');
+SET @tag_weekend=(SELECT id FROM interest_tag WHERE name='周末');
+SET @tag_beginner=(SELECT id FROM interest_tag WHERE name='新手友好');
+SET @tag_social=(SELECT id FROM interest_tag WHERE name='轻社交');
+SET @tag_budget=(SELECT id FROM interest_tag WHERE name='低预算');
 INSERT INTO user_interest (user_id,tag_id,created_at) VALUES
-(@host_a,@tag_weekend,NOW()),(@host_a,@tag_beginner,NOW()),(@host_b,@tag_social,NOW()),(@member_a,@tag_beginner,NOW()),(@member_b,@tag_social,NOW());
+(@host_a,@tag_weekend,NOW()),(@host_a,@tag_beginner,NOW()),(@host_b,@tag_social,NOW()),
+(@member_a,@tag_weekend,NOW()),(@member_a,@tag_beginner,NOW()),(@member_a,@tag_social,NOW()),
+(@member_b,@tag_social,NOW()),(@member_b,@tag_budget,NOW());
 
 INSERT INTO activity (creator_id,title,category,tags,start_time,end_time,signup_deadline,city,address,longitude,latitude,min_participants,max_participants,cost_type,cost_amount,aa_rule,cover_url,description,notes,need_approval,status,approved_count,favorite_count,created_at,updated_at,deleted) VALUES
 (@host_a,'[CITY_PARTY_DEMO] 城市徒步回顾','户外','周末,新手友好',DATE_SUB(NOW(),INTERVAL 50 DAY),DATE_ADD(DATE_SUB(NOW(),INTERVAL 50 DAY),INTERVAL 3 HOUR),DATE_SUB(NOW(),INTERVAL 51 DAY),'北京','演示地点 A',116.400000,39.900000,2,8,'FREE',0,NULL,NULL,'[CITY_PARTY_DEMO] 已结束活动，用于评价和完成报名演示',NULL,0,'FINISHED',3,1,DATE_SUB(NOW(),INTERVAL 60 DAY),NOW(),0),
 (@host_b,'[CITY_PARTY_DEMO] 取消的观影局','观影','轻社交',DATE_SUB(NOW(),INTERVAL 20 DAY),DATE_ADD(DATE_SUB(NOW(),INTERVAL 20 DAY),INTERVAL 2 HOUR),DATE_SUB(NOW(),INTERVAL 21 DAY),'上海','演示地点 B',121.470000,31.230000,2,6,'AA',60,'演示 AA 规则',NULL,'[CITY_PARTY_DEMO] 已取消活动',NULL,1,'CANCELLED',0,0,DATE_SUB(NOW(),INTERVAL 35 DAY),NOW(),0),
 (@host_a,'[CITY_PARTY_DEMO] 桌游满员局','桌游','新手友好,轻社交',DATE_ADD(NOW(),INTERVAL 3 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 3 DAY),INTERVAL 3 HOUR),DATE_ADD(NOW(),INTERVAL 2 DAY),'北京','演示地点 C',116.320000,39.980000,3,3,'AA',45,'演示 AA 规则',NULL,'[CITY_PARTY_DEMO] 满员并存在候补',NULL,0,'FULL',3,2,DATE_SUB(NOW(),INTERVAL 14 DAY),NOW(),0),
 (@host_b,'[CITY_PARTY_DEMO] 周末自习室','学习','周末,安静',DATE_ADD(NOW(),INTERVAL 5 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 5 DAY),INTERVAL 6 HOUR),DATE_ADD(NOW(),INTERVAL 4 DAY),'杭州','演示地点 D',120.150000,30.280000,2,10,'FREE',0,NULL,NULL,'[CITY_PARTY_DEMO] 报名中活动',NULL,1,'SIGNING',1,0,DATE_SUB(NOW(),INTERVAL 7 DAY),NOW(),0),
-(@host_b,'[CITY_PARTY_DEMO] 咖啡探店','探店','低预算,轻社交',DATE_ADD(NOW(),INTERVAL 7 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 7 DAY),INTERVAL 2 HOUR),DATE_ADD(NOW(),INTERVAL 6 DAY),'上海','演示地点 E',121.450000,31.220000,2,5,'ESTIMATE',55,NULL,NULL,'[CITY_PARTY_DEMO] 即将开始活动',NULL,0,'UPCOMING',1,1,DATE_SUB(NOW(),INTERVAL 2 DAY),NOW(),0);
+(@host_b,'[CITY_PARTY_DEMO] 咖啡探店','探店','低预算,轻社交',DATE_ADD(NOW(),INTERVAL 7 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 7 DAY),INTERVAL 2 HOUR),DATE_ADD(NOW(),INTERVAL 6 DAY),'上海','演示地点 E',121.450000,31.220000,2,5,'ESTIMATE',55,NULL,NULL,'[CITY_PARTY_DEMO] 即将开始活动',NULL,0,'UPCOMING',1,1,DATE_SUB(NOW(),INTERVAL 2 DAY),NOW(),0),
+(@host_a,'[CITY_PARTY_DEMO] 周末飞盘体验','运动','周末,新手友好',DATE_ADD(NOW(),INTERVAL 4 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 4 DAY),INTERVAL 2 HOUR),DATE_ADD(NOW(),INTERVAL 3 DAY),'北京','演示地点 F',116.390000,39.910000,4,12,'FREE',0,NULL,NULL,'[CITY_PARTY_DEMO] 面向新手的周末飞盘活动',NULL,0,'SIGNING',4,3,DATE_SUB(NOW(),INTERVAL 5 DAY),NOW(),0),
+(@host_b,'[CITY_PARTY_DEMO] 低预算桌游茶话会','桌游','轻社交,低预算',DATE_ADD(NOW(),INTERVAL 6 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 6 DAY),INTERVAL 3 HOUR),DATE_ADD(NOW(),INTERVAL 5 DAY),'上海','演示地点 G',121.460000,31.225000,2,8,'AA',35,'演示 AA 规则',NULL,'[CITY_PARTY_DEMO] 低预算轻社交活动',NULL,0,'SIGNING',2,5,DATE_SUB(NOW(),INTERVAL 4 DAY),NOW(),0);
 
 SET @finished=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 城市徒步回顾');
 SET @cancelled=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 取消的观影局');
 SET @full=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 桌游满员局');
 SET @signing=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 周末自习室');
 SET @upcoming=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 咖啡探店');
+SET @weekend_sports=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 周末飞盘体验');
+SET @budget_social=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 低预算桌游茶话会');
 
 INSERT INTO activity_tag (activity_id,tag_name,created_at) VALUES
-(@finished,'新手友好',NOW()),(@finished,'周末',NOW()),(@cancelled,'轻社交',NOW()),(@full,'桌游',NOW()),(@full,'新手友好',NOW()),(@signing,'学习',NOW()),(@upcoming,'探店',NOW());
+(@finished,'新手友好',NOW()),(@finished,'周末',NOW()),(@cancelled,'轻社交',NOW()),
+(@full,'桌游',NOW()),(@full,'新手友好',NOW()),(@signing,'学习',NOW()),(@upcoming,'探店',NOW()),
+(@weekend_sports,'周末',NOW()),(@weekend_sports,'新手友好',NOW()),
+(@budget_social,'轻社交',NOW()),(@budget_social,'低预算',NOW());
 
 INSERT INTO activity_signup (activity_id,user_id,status,apply_message,reviewed_at,created_at,updated_at,deleted) VALUES
 (@finished,@member_a,'COMPLETED','[CITY_PARTY_DEMO] 已完成报名',DATE_SUB(NOW(),INTERVAL 51 DAY),DATE_SUB(NOW(),INTERVAL 55 DAY),NOW(),0),

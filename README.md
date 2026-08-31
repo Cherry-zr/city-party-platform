@@ -37,6 +37,7 @@
 | 模块 | 实现重点 |
 | --- | --- |
 | 活动发现与生命周期 | 支持活动列表、附近活动地图、位置选择，以及发布、编辑、取消、结束等状态流转。 |
+| 个性化活动推荐 | 使用 Jaccard、活动标签覆盖率、Haversine 距离、热度、时间和发起人信用进行可解释加权排序，支持冷启动与 Redis 故障回退。 |
 | 报名候补与一致性 | 支持报名审核、退出、候补队列和候补转正；通过数据库唯一约束与条件更新降低重复报名和并发超员风险。 |
 | 实时互动 | 基于 WebSocket 提供活动群聊与系统通知推送，并维护通知未读状态。 |
 | 评价信用闭环 | 活动结束后生成互评关系，评价结果写入信用记录并更新用户信用分。 |
@@ -118,7 +119,7 @@ flowchart TB
 
 - 前端同时提供移动端用户页面和 Element Plus 管理后台，通过 Axios 与 Vite 代理访问后端。
 - 后端按 Controller、Service、Mapper 分层，统一处理鉴权、状态流转、事务和数据访问。
-- MySQL 保存最终业务状态；Redis 用于验证码、候补顺序和管理员概览缓存。
+- MySQL 保存最终业务状态；Redis 用于验证码、候补顺序、管理员概览和 5 分钟个性化推荐缓存。
 
 更多设计细节见[系统架构说明](docs/architecture.md)与[安全与并发设计](docs/security-and-concurrency.md)。
 
@@ -211,17 +212,17 @@ npm run dev
 
 ## 测试与工程质量
 
-以下为仓库 `docs/final-acceptance.md` 记录的最终验收结果，不是实时覆盖率或线上运行指标：
+以下为 Stage 2.8 本地最终验收结果，不是实时覆盖率或线上运行指标：
 
 | 验证项 | 最终验收记录 |
 | --- | --- |
-| 后端测试 | `mvn test`：85 项通过，失败 0、错误 0、跳过 0 |
-| 后端打包 | `mvn clean package -DskipTests`：通过 |
-| 前端构建 | `npm ci` 与 `npm run build`：通过 |
-| Playwright | 2 个冒烟用例通过，失败 0 |
-| Docker Compose | 配置检查通过；空数据卷由完整 schema 初始化 |
-| 演示数据 | 支持按统一标识重复导入和定向清理 |
-| CI 与安全扫描 | GitHub Actions CI、Security Scan 成功；Gitleaks 最终验收未发现泄漏 |
+| 后端测试 | `mvn test`：120 项通过，失败 0、错误 0、跳过 0 |
+| 后端打包 | `mvn clean package`：120 项测试通过并成功生成 JAR |
+| 前端构建 | `npm run build`：2549 个模块转换完成 |
+| Playwright | 6 个端到端用例通过，失败 0 |
+| Docker Compose | 既有配置支持由完整 schema 初始化空数据卷；Stage 2.8 使用临时 MySQL/Redis 容器验收 |
+| 演示数据 | 6 个演示用户、7 个演示活动，支持重复导入和定向清理 |
+| CI 与安全扫描 | 沿用既有 GitHub Actions CI、Security Scan 和 Gitleaks 配置，本 Stage 未修改工作流 |
 
 自动化工作流：
 
@@ -236,6 +237,7 @@ npm run dev
 | --- | --- |
 | [本地开发环境](docs/development-setup.md) | Windows、Docker、后端、前端与地图配置 |
 | [系统架构](docs/architecture.md) | 前后端分层、请求链路、WebSocket 与存储组件 |
+| [推荐算法](docs/recommendation-algorithm.md) | 候选召回、Jaccard、Haversine、多特征加权、冷启动和 Redis 缓存 |
 | [核心业务流程](docs/business-flows.md) | 注册登录、报名候补、互评信用、群聊和看板流程 |
 | [数据库设计](docs/database-design.md) / [初始化说明](docs/database-initialization.md) | 表结构、约束、完整基线与旧库升级边界 |
 | [Docker 开发环境](docs/docker-development.md) | MySQL/Redis 容器、端口、数据卷与初始化机制 |
