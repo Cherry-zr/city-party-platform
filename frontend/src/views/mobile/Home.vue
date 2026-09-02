@@ -96,6 +96,20 @@ function useLocationOptimization() {
     showFailToast('当前浏览器不支持定位，已保留当前推荐')
     return
   }
+  if ('isSecureContext' in window && !window.isSecureContext) {
+    if (import.meta.env.DEV) {
+      console.warn('Geolocation unavailable in insecure context', {
+        secureContext: window.isSecureContext,
+        protocol: window.location.protocol,
+        origin: window.location.origin
+      })
+    }
+    showFailToast('当前访问环境不支持设备定位，请使用 HTTPS 后重试')
+    return
+  }
+  if (locating.value) {
+    return
+  }
   locating.value = true
   navigator.geolocation.getCurrentPosition(
     async ({ coords }) => {
@@ -110,9 +124,26 @@ function useLocationOptimization() {
         locating.value = false
       }
     },
-    () => {
+    (error) => {
       locating.value = false
-      showFailToast('未能获取位置，已保留当前推荐')
+      if (import.meta.env.DEV) {
+        console.warn('Geolocation failed', {
+          code: error.code,
+          message: error.message,
+          secureContext: window.isSecureContext,
+          protocol: window.location.protocol,
+          origin: window.location.origin
+        })
+      }
+      if (error.code === error.PERMISSION_DENIED || error.code === 1) {
+        showFailToast('定位权限未开启，请允许定位后重试；当前推荐已保留')
+      } else if (error.code === error.POSITION_UNAVAILABLE || error.code === 2) {
+        showFailToast('暂时无法确定位置，请检查系统定位服务；当前推荐已保留')
+      } else if (error.code === error.TIMEOUT || error.code === 3) {
+        showFailToast('获取位置超时，请稍后重试；当前推荐已保留')
+      } else {
+        showFailToast('未能获取位置，已保留当前推荐')
+      }
     },
     { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
   )

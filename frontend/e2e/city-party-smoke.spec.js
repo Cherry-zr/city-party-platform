@@ -61,6 +61,115 @@ async function silenceBrowserDefaultRequests(page) {
   await page.route('**/favicon.ico', (route) => route.fulfill({ status: 204, body: '' }))
 }
 
+const homeRecommendedActivity = {
+  id: 901,
+  creatorId: 88,
+  title: '周末新手桌游局',
+  category: '桌游',
+  tags: ['周末', '新手友好'],
+  startTime: '2026-09-05T14:00:00',
+  endTime: '2026-09-05T17:00:00',
+  signupDeadline: '2026-09-04T20:00:00',
+  city: '北京',
+  address: '朝阳区桌游店',
+  longitude: 116.4,
+  latitude: 39.9,
+  minParticipants: 2,
+  maxParticipants: 8,
+  approvedCount: 3,
+  favoriteCount: 4,
+  waitlistCount: 0,
+  costType: 'AA',
+  costAmount: 45,
+  status: 'SIGNING',
+  creator: { id: 88, nickname: '桌游发起人', avatarUrl: null, creditScore: 108 }
+}
+
+async function mockRecommendationHomeApis(page, onRecommendationRequest = () => {}) {
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
+    const url = new URL(route.request().url())
+    const pathname = url.pathname
+    let data = { records: [], total: 0 }
+    if (pathname === '/api/recommendations/activities') {
+      onRecommendationRequest(url)
+      const optimized = url.searchParams.has('longitude') && url.searchParams.has('latitude')
+      data = [{
+        activity: { ...homeRecommendedActivity, distanceKm: optimized ? 0.42 : null },
+        recommendationScore: optimized ? 94.12 : 92.35,
+        distanceKm: optimized ? 0.42 : null,
+        reasons: optimized
+          ? ['匹配你的兴趣：周末、新手友好', '距你约 0.42 km', '近期报名热度较高']
+          : ['匹配你的兴趣：周末、新手友好', '近期报名热度较高', '发起人信用良好'],
+        scoreDetail: {
+          interest: 100,
+          distance: optimized ? 91.94 : null,
+          hotness: 72,
+          time: 88,
+          credit: 96
+        }
+      }]
+    } else if (pathname === '/api/activities/901') {
+      data = homeRecommendedActivity
+    } else if (pathname === '/api/notices/unread-count') {
+      data = 0
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data })
+    })
+  })
+}
+
+async function mockHomeBrowserEnvironment(page, { geolocation = 'permission-denied', secureContext = true } = {}) {
+  await page.addInitScript(({ geolocationMode, isSecureContext }) => {
+    window.WebSocket = class MockWebSocket {
+      static CONNECTING = 0
+      static OPEN = 1
+      static CLOSED = 3
+
+      constructor() {
+        this.readyState = MockWebSocket.OPEN
+        queueMicrotask(() => this.onopen?.())
+      }
+
+      send() {}
+
+      close() {
+        this.readyState = MockWebSocket.CLOSED
+        this.onclose?.()
+      }
+    }
+
+    window.__geolocationCallCount = 0
+    if (!isSecureContext) {
+      Object.defineProperty(window, 'isSecureContext', { configurable: true, value: false })
+    }
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: geolocationMode === 'unavailable'
+        ? undefined
+        : {
+            getCurrentPosition(success, error) {
+              window.__geolocationCallCount += 1
+              if (geolocationMode === 'success') {
+                success({ coords: { latitude: 39.9042, longitude: 116.4074 } })
+              } else {
+                error({ code: 1, message: 'Permission denied by E2E test' })
+              }
+            }
+          }
+    })
+  }, { geolocationMode: geolocation, isSecureContext: secureContext })
+}
+
+async function seedRecommendationSession(page) {
+  await seedSession(page, {
+    token: 'recommendation-feature-token',
+    user: { id: 7, username: 'recommendation_user', nickname: '推荐用户', role: 'USER' }
+  })
+}
+
 async function mockMobileNavigationApis(page) {
   await page.route(/^https?:\/\/[^/]+\/api\//, (route) => {
     const pathname = new URL(route.request().url()).pathname
@@ -269,103 +378,80 @@ test('guest home keeps the original activity flow without requesting recommendat
 
 test('logged-in home shows explainable recommendations and opens activity detail', async ({ page }) => {
   await silenceBrowserDefaultRequests(page)
-  await page.addInitScript(() => {
-    window.WebSocket = class MockWebSocket {
-      static CONNECTING = 0
-      static OPEN = 1
-      static CLOSED = 3
-
-      constructor() {
-        this.readyState = MockWebSocket.OPEN
-        queueMicrotask(() => this.onopen?.())
-      }
-
-      send() {}
-
-      close() {
-        this.readyState = MockWebSocket.CLOSED
-        this.onclose?.()
-      }
-    }
-
-    Object.defineProperty(navigator, 'geolocation', {
-      configurable: true,
-      value: {
-        getCurrentPosition(_success, error) {
-          error({ code: 1, message: 'Permission denied by E2E test' })
-        }
-      }
-    })
-  })
-  const recommendedActivity = {
-    id: 901,
-    creatorId: 88,
-    title: '周末新手桌游局',
-    category: '桌游',
-    tags: ['周末', '新手友好'],
-    startTime: '2026-09-05T14:00:00',
-    endTime: '2026-09-05T17:00:00',
-    signupDeadline: '2026-09-04T20:00:00',
-    city: '北京',
-    address: '朝阳区桌游店',
-    longitude: 116.4,
-    latitude: 39.9,
-    minParticipants: 2,
-    maxParticipants: 8,
-    approvedCount: 3,
-    favoriteCount: 4,
-    waitlistCount: 0,
-    costType: 'AA',
-    costAmount: 45,
-    status: 'SIGNING',
-    creator: { id: 88, nickname: '桌游发起人', avatarUrl: null, creditScore: 108 }
-  }
-
-  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
-    const pathname = new URL(route.request().url()).pathname
-    let data = { records: [], total: 0 }
-    if (pathname === '/api/recommendations/activities') {
-      data = [{
-        activity: recommendedActivity,
-        recommendationScore: 92.35,
-        distanceKm: null,
-        reasons: ['匹配你的兴趣：周末、新手友好', '近期报名热度较高', '发起人信用良好'],
-        scoreDetail: { interest: 100, distance: null, hotness: 72, time: 88, credit: 96 }
-      }]
-    } else if (pathname === '/api/activities/901') {
-      data = recommendedActivity
-    } else if (pathname === '/api/notices/unread-count') {
-      data = 0
-    }
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ code: 200, data })
-    })
-  })
-  await seedSession(page, {
-    token: 'recommendation-feature-token',
-    user: { id: 7, username: 'recommendation_user', nickname: '推荐用户', role: 'USER' }
-  })
+  await mockHomeBrowserEnvironment(page)
+  await mockRecommendationHomeApis(page)
+  await seedRecommendationSession(page)
 
   await page.goto('/')
   await expect(page.getByText('为你推荐', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '使用位置优化' })).toBeVisible()
-  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
   await expect(page.getByText('匹配你的兴趣：周末、新手友好')).toBeVisible()
 
   await page.getByPlaceholder('搜索活动、地点、说明').fill('飞盘')
   await page.getByPlaceholder('搜索活动、地点、说明').press('Enter')
-  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
   await page.getByText('运动', { exact: true }).first().click()
-  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
 
   await page.getByRole('button', { name: '使用位置优化' }).click()
-  await expect(page.locator('.van-toast')).toContainText('未能获取位置，已保留当前推荐')
-  await expect(page.getByText(recommendedActivity.title)).toBeVisible()
+  await expect(page.locator('.van-toast')).toContainText('定位权限未开启')
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
+  await expect(page.getByText('活动发现', { exact: true })).toBeVisible()
 
   await page.locator('.recommendation-item .activity-card').click()
   await expect(page).toHaveURL('/activities/901')
+})
+
+test('home location optimization keeps recommendations when geolocation is unavailable', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  await mockHomeBrowserEnvironment(page, { geolocation: 'unavailable' })
+  await mockRecommendationHomeApis(page)
+  await seedRecommendationSession(page)
+
+  await page.goto('/')
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
+  await page.getByRole('button', { name: '使用位置优化' }).click()
+
+  await expect(page.locator('.van-toast')).toContainText('当前浏览器不支持定位')
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
+  await expect(page.getByText('活动发现', { exact: true })).toBeVisible()
+})
+
+test('home location optimization explains insecure contexts without calling geolocation', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  await mockHomeBrowserEnvironment(page, { secureContext: false })
+  await mockRecommendationHomeApis(page)
+  await seedRecommendationSession(page)
+
+  await page.goto('/')
+  await page.getByRole('button', { name: '使用位置优化' }).click()
+
+  await expect(page.locator('.van-toast')).toContainText('当前访问环境不支持设备定位，请使用 HTTPS 后重试')
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
+  await expect(page.getByText('活动发现', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => window.__geolocationCallCount)).toBe(0)
+})
+
+test('home location optimization sends longitude and latitude to recommendations', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  const recommendationRequests = []
+  await mockHomeBrowserEnvironment(page, { geolocation: 'success' })
+  await mockRecommendationHomeApis(page, (url) => recommendationRequests.push(url))
+  await seedRecommendationSession(page)
+
+  await page.goto('/')
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
+  await page.getByRole('button', { name: '使用位置优化' }).click()
+
+  await expect.poll(() => recommendationRequests.length).toBe(2)
+  expect(recommendationRequests[0].searchParams.has('longitude')).toBeFalsy()
+  expect(recommendationRequests[0].searchParams.has('latitude')).toBeFalsy()
+  expect(recommendationRequests[1].searchParams.get('longitude')).toBe('116.4074')
+  expect(recommendationRequests[1].searchParams.get('latitude')).toBe('39.9042')
+  await expect(page.getByText('距你约 0.42 km')).toBeVisible()
+  await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
+  await expect(page.getByText('活动发现', { exact: true })).toBeVisible()
 })
 
 test('admin dashboard, analytics ranges and user route guard', async ({ page, request }) => {
