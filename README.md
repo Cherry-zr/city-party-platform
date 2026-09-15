@@ -36,12 +36,12 @@
 
 | 模块 | 实现重点 |
 | --- | --- |
-| 活动发现与生命周期 | 支持活动列表、附近活动地图、位置选择，以及发布、编辑、取消、结束等状态流转。 |
+| 活动发现与生命周期 | 活动内容审核与生命周期状态分离；仅审核通过的活动进入首页、搜索、地图和推荐。 |
 | 个性化活动推荐 | 使用 Jaccard、活动标签覆盖率、Haversine 距离、热度、时间和发起人信用进行可解释加权排序，支持冷启动与 Redis 故障回退。 |
 | 报名候补与一致性 | 支持报名审核、退出、候补队列和候补转正；通过数据库唯一约束与条件更新降低重复报名和并发超员风险。 |
 | 实时互动 | 基于 WebSocket 提供活动群聊与系统通知推送，并维护通知未读状态。 |
 | 评价信用闭环 | 活动结束后生成互评关系，评价结果写入信用记录并更新用户信用分。 |
-| 运营分析与安全 | 提供管理员概览、趋势、分布、业务质量指标和热门活动排行；实现 JWT 状态复核、PBKDF2 密码升级与上传文件头校验。 |
+| 运营分析与安全 | 提供管理员活动审核与运营分析；注册使用服务端滑块 challenge、一次性令牌和 Redis IP 限流。 |
 | 工程化交付 | 使用 Docker Compose 管理 MySQL/Redis，本地与 CI 覆盖 Maven、前端构建、Playwright 冒烟测试和 Gitleaks 密钥扫描。 |
 
 ## 功能演示
@@ -119,7 +119,7 @@ flowchart TB
 
 - 前端同时提供移动端用户页面和 Element Plus 管理后台，通过 Axios 与 Vite 代理访问后端。
 - 后端按 Controller、Service、Mapper 分层，统一处理鉴权、状态流转、事务和数据访问。
-- MySQL 保存最终业务状态；Redis 用于验证码、候补顺序、管理员概览和 5 分钟个性化推荐缓存。
+- MySQL 保存最终业务状态；Redis 用于一次性验证码、注册限流、候补顺序、管理员概览和 5 分钟个性化推荐缓存。
 
 更多设计细节见[系统架构说明](docs/architecture.md)与[安全与并发设计](docs/security-and-concurrency.md)。
 
@@ -186,6 +186,7 @@ $env:MYSQL_USERNAME="city_party"
 $env:MYSQL_PASSWORD="你的本地数据库密码"
 $env:REDIS_HOST="127.0.0.1"
 $env:REDIS_PORT="16379"
+$env:JWT_SECRET="请在本机生成至少 32 位的随机字符串"
 mvn spring-boot:run
 ```
 
@@ -212,15 +213,15 @@ npm run dev
 
 ## 测试与工程质量
 
-以下为 Stage 2.8 本地最终验收结果，不是实时覆盖率或线上运行指标：
+以下为 Stage 2.9 本地最终验收结果，不是实时覆盖率或线上运行指标：
 
 | 验证项 | 最终验收记录 |
 | --- | --- |
-| 后端测试 | `mvn test`：120 项通过，失败 0、错误 0、跳过 0 |
-| 后端打包 | `mvn clean package`：120 项测试通过并成功生成 JAR |
-| 前端构建 | `npm run build`：2549 个模块转换完成 |
-| Playwright | 6 个端到端用例通过，失败 0 |
-| Docker Compose | 既有配置支持由完整 schema 初始化空数据卷；Stage 2.8 使用临时 MySQL/Redis 容器验收 |
+| 后端测试 | `mvn test`：141 项通过，失败 0、错误 0、跳过 0 |
+| 后端打包 | `mvn clean package`：141 项测试通过并成功生成 JAR |
+| 前端构建 | `npm run build`：2552 个模块转换完成 |
+| Playwright | 12 个端到端用例通过，失败 0 |
+| 隔离验收 | Stage 2.9 使用唯一命名的临时 MySQL 数据库与独立 Redis DB，未清理开发数据库 |
 | 演示数据 | 6 个演示用户、7 个演示活动，支持重复导入和定向清理 |
 | CI 与安全扫描 | 沿用既有 GitHub Actions CI、Security Scan 和 Gitleaks 配置，本 Stage 未修改工作流 |
 
@@ -245,6 +246,7 @@ npm run dev
 | [测试体系](docs/testing-guide.md) / [最终验收](docs/final-acceptance.md) | 测试命令、历史结果、依赖审计和截图索引 |
 | [API 概览](docs/api-overview.md) | REST API、WebSocket 与管理员接口概览 |
 | [安全与并发设计](docs/security-and-concurrency.md) | JWT 复核、密码升级、文件校验、报名并发和 Redis 回退 |
+| [Stage 2.9 安全与审核升级](docs/stage2.9-security-moderation.md) | 活动审核 migration、注册限流、可信代理、地图定位与验收步骤 |
 | [简历项目描述](docs/resume-project-description.md) / [面试问答](docs/interview-guide.md) | 简历表述、技术取舍与面试讲解材料 |
 
 ## 已知限制

@@ -15,9 +15,9 @@ Set-Location D:\last_one-form-group\city-party-platform\backend
 mvn test
 ```
 
-Stage 2.8 最终验收结果：
+Stage 2.9 最终验收结果：
 
-- 测试总数：120
+- 测试总数：141
 - 失败：0
 - 错误：0
 - 跳过：0
@@ -46,6 +46,9 @@ Stage 2.8 最终验收结果：
 - 空统计和除零。
 - `RecommendationScorerTest`：兴趣、距离、热度、时间、信用和缺失特征动态权重。
 - `RecommendationServiceTest`：候选过滤、FULL 候补、兴趣/位置排序、冷启动、稳定排序、Top N、Redis 缓存与故障回退。
+- `ActivityAuditServiceTest`：管理员权限、通过/拒绝、拒绝原因和审核元数据。
+- `RegistrationCaptchaServiceTest`：滑块校验、过期、错误轨迹、challenge 与注册令牌防重放。
+- `RegistrationRateLimitServiceTest` 与 `ClientIpResolverTest`：Redis 限流、可信代理和伪造转发头隔离。
 
 ## 后端打包
 
@@ -54,7 +57,7 @@ Set-Location D:\last_one-form-group\city-party-platform\backend
 mvn clean package
 ```
 
-Stage 2.8 最终验收：120 项测试通过并成功生成 JAR。
+Stage 2.9 最终验收：141 项测试通过并成功生成 JAR。
 
 ## Maven 依赖树
 
@@ -76,10 +79,10 @@ Set-Location D:\last_one-form-group\city-party-platform\frontend
 npm run build
 ```
 
-Stage 2.8 最终验收：
+Stage 2.9 最终验收：
 
 - `npm run build`：通过。
-- Vite 转换模块：2549。
+- Vite 转换模块：2552。
 
 既存 warning：
 
@@ -118,12 +121,12 @@ $env:PLAYWRIGHT_BASE_URL="http://127.0.0.1:5173"
 
 - 只读流程使用固定演示账号。
 - 写操作创建带统一前缀的唯一活动。
-- 写操作使用隔离验收数据库，验收后删除本次临时容器。
+- 写操作使用唯一命名的隔离验收数据库，验收后只定向删除该临时库。
 - 不清空或清理开发数据库。
 
-Stage 2.8 最终验收：
+Stage 2.9 最终验收：
 
-- Playwright 用例数：6
+- Playwright 用例数：12
 - 失败：0
 - E2E 临时数据残留：0
 
@@ -146,6 +149,10 @@ Stage 2.8 最终验收：
 - 访客首页不展示推荐区且不请求推荐接口。
 - 搜索、分类筛选和定位拒绝不清空推荐结果。
 - 推荐场景通过 mock API 和 WebSocket 隔离，不依赖 CI 的真实定位权限。
+- 活动发布后待审、管理员通过/拒绝、发起人查看原因和修改后重新待审。
+- 注册滑块生成一次性 token，注册请求不再提交旧字符验证码字段。
+- 浏览器定位、地图中心和逆地理编码城市保持一致，定位失败不回退北京。
+- 发布页按城市检索 POI，切换城市后清空旧地址和坐标。
 
 ## npm audit
 
