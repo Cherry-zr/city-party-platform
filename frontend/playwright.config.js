@@ -1,6 +1,12 @@
 import { defineConfig } from '@playwright/test'
+import { loadEnv } from 'vite'
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:5173'
+const developmentEnv = loadEnv('development', process.cwd(), '')
+const localHttpsEnabled = Boolean(
+  developmentEnv.DEV_HTTPS_CERT_PATH && developmentEnv.DEV_HTTPS_KEY_PATH
+)
+const defaultProtocol = localHttpsEnabled ? 'https' : 'http'
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || defaultProtocol + '://127.0.0.1:5173'
 
 export default defineConfig({
   testDir: './e2e',
@@ -17,6 +23,7 @@ export default defineConfig({
   ],
   use: {
     baseURL,
+    ignoreHTTPSErrors: localHttpsEnabled,
     channel: 'chrome',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
@@ -28,6 +35,7 @@ export default defineConfig({
         command: 'npm run dev -- --host 127.0.0.1',
         url: baseURL,
         reuseExistingServer: true,
+        ignoreHTTPSErrors: localHttpsEnabled,
         timeout: 120_000,
         stdout: 'ignore',
         stderr: 'pipe'

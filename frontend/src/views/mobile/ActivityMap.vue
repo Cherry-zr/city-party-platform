@@ -24,6 +24,18 @@
         </button>
       </div>
       <div class="activity-meta">{{ locationText }}</div>
+      <div class="map-location-actions">
+        <van-button
+          data-testid="locate-current-city"
+          size="small"
+          type="primary"
+          :loading="locating"
+          @click="locateUser"
+        >
+          定位当前城市
+        </van-button>
+        <van-button size="small" plain @click="showCityPicker = true">手动选择城市</van-button>
+      </div>
     </div>
 
     <div v-if="configured" ref="mapEl" class="activity-map-container"></div>
@@ -43,6 +55,12 @@
       :activity="item"
       @click="$router.push(`/activities/${item.id}`)"
     />
+    <van-action-sheet
+      v-model:show="showCityPicker"
+      :actions="cityOptions"
+      cancel-text="取消"
+      @select="selectManualCity"
+    />
   </div>
 </template>
 
@@ -52,19 +70,19 @@ import { useRoute, useRouter } from 'vue-router'
 import { showFailToast } from 'vant'
 import ActivityCard from '../../components/ActivityCard.vue'
 import { listNearbyActivities } from '../../api/activity'
-import { useAuthStore } from '../../stores/auth'
-import { getCityCenter, hasAmapConfig, loadAmap } from '../../utils/amap'
+import { cityCenters, hasAmapConfig, loadAmap } from '../../utils/amap'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
-const configured = hasAmapConfig()
+const configured = hasAmapConfig() || Boolean(window.AMap)
 const mapEl = ref(null)
 const activities = ref([])
 const loading = ref(false)
 const selectedActivity = ref(null)
 const mapError = ref('')
 const locationText = ref('正在准备定位信息')
+const locating = ref(false)
+const showCityPicker = ref(false)
 const distanceKm = ref(Number(route.query.distanceKm) || 5)
 const distanceOptions = [
   { text: '1km', value: 1 },
@@ -72,66 +90,119 @@ const distanceOptions = [
   { text: '5km', value: 5 },
   { text: '10km', value: 10 }
 ]
+const cityOptions = Object.keys(cityCenters).map((name) => ({ name }))
 
 let AMapInstance = null
 let map = null
 let infoWindow = null
+let geocoder = null
 let markers = []
-let currentCenter = [
-  Number(route.query.longitude) || getCityCenter(auth.user?.city)[0],
-  Number(route.query.latitude) || getCityCenter(auth.user?.city)[1]
-]
-let currentCity = auth.user?.city || '北京'
+let currentCenter = null
+let currentCity = ''
 
 onMounted(async () => {
   if (configured) {
     await nextTick()
     await initMap()
   }
-  await loadNearbyActivities()
+  await locateUser()
 })
 
 async function initMap() {
   try {
     AMapInstance = await loadAmap()
-    map = new AMapInstance.Map(mapEl.value, {
-      zoom: 13,
-      center: currentCenter
-    })
+    map = new AMapInstance.Map(mapEl.value, { zoom: 13 })
     infoWindow = new AMapInstance.InfoWindow({ offset: new AMapInstance.Pixel(0, -30) })
-    if (route.query.longitude && route.query.latitude) {
-      locationText.value = '已使用活动位置作为地图中心'
-      return
-    }
-    locateUser()
+    geocoder = new AMapInstance.Geocoder()
   } catch (error) {
     mapError.value = error.message || '地图加载失败，请检查配置'
-    locationText.value = '地图加载失败，已使用默认城市查询活动'
+    locationText.value = '地图加载失败，仍可使用浏览器定位或手动选择城市'
   }
 }
 
-function locateUser() {
-  if (!AMapInstance || !map) return
-  const geolocation = new AMapInstance.Geolocation({
-    enableHighAccuracy: true,
-    timeout: 8000
-  })
-  geolocation.getCurrentPosition(async (status, result) => {
-    if (status === 'complete' && result?.position) {
-      currentCenter = [result.position.lng, result.position.lat]
-      currentCity = result.addressComponent?.city || currentCity
-      map.setCenter(currentCenter)
-      locationText.value = `已定位到当前位置，城市：${currentCity}`
-    } else {
-      currentCenter = getCityCenter(currentCity)
-      map.setCenter(currentCenter)
-      locationText.value = `定位失败，已使用 ${currentCity || '北京'} 作为默认城市`
-    }
+async function locateUser() {
+  if (locating.value) return
+  if (!navigator.geolocation) {
+    handleLocationFailure('当前浏览器不支持定位，请手动选择城市')
+    return
+  }
+  if ('isSecureContext' in window && !window.isSecureContext) {
+    handleLocationFailure('当前环境不允许定位，请使用 HTTPS 或 localhost 后重试')
+    return
+  }
+  locating.value = true
+  locationText.value = '正在获取真实位置...'
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      })
+    })
+    const longitude = Number(position.coords.longitude)
+    const latitude = Number(position.coords.latitude)
+    currentCenter = [longitude, latitude]
+    currentCity = await reverseGeocodeCity(currentCenter)
+    map?.setCenter(currentCenter)
+    locationText.value = currentCity
+      ? '已定位到当前位置，城市：' + currentCity
+      : '已定位到当前位置，但暂时无法解析城市'
     await loadNearbyActivities()
+  } catch (error) {
+    handleLocationFailure(locationErrorMessage(error))
+  } finally {
+    locating.value = false
+  }
+}
+
+function reverseGeocodeCity(position) {
+  if (!geocoder) return Promise.resolve('')
+  return new Promise((resolve) => {
+    geocoder.getAddress(position, (status, result) => {
+      if (status !== 'complete' || !result?.regeocode) {
+        resolve('')
+        return
+      }
+      const component = result.regeocode.addressComponent || {}
+      resolve(component.city || component.province || '')
+    })
   })
 }
 
+function handleLocationFailure(message) {
+  currentCenter = null
+  currentCity = ''
+  activities.value = []
+  selectedActivity.value = null
+  renderMarkers()
+  locationText.value = message
+  showFailToast(message)
+}
+
+function locationErrorMessage(error) {
+  if (error?.code === 1) return '定位未授权，请允许定位后重试或手动选择城市'
+  if (error?.code === 2) return '当前位置不可用，请检查系统定位服务或手动选择城市'
+  if (error?.code === 3) return '定位超时，请重新定位或手动选择城市'
+  return '定位失败，请重新定位或手动选择城市'
+}
+
+async function selectManualCity(item) {
+  const center = cityCenters[item.name]
+  if (!center) return
+  showCityPicker.value = false
+  currentCity = item.name
+  currentCenter = [...center]
+  map?.setCenter(currentCenter)
+  locationText.value = '已手动选择城市：' + currentCity
+  await loadNearbyActivities()
+}
+
 async function loadNearbyActivities() {
+  if (!currentCenter) {
+    activities.value = []
+    return
+  }
   loading.value = true
   try {
     const params = {
@@ -140,11 +211,6 @@ async function loadNearbyActivities() {
       distanceKm: distanceKm.value,
       current: 1,
       size: 50
-    }
-    if (!configured && currentCity) {
-      delete params.longitude
-      delete params.latitude
-      params.city = currentCity
     }
     const data = await listNearbyActivities(params)
     activities.value = data.records || []
@@ -178,7 +244,6 @@ function renderMarkers() {
     })
   if (markers.length > 0) {
     map.add(markers)
-    map.setFitView(markers, false, [48, 24, 48, 24])
   }
 }
 
@@ -239,5 +304,11 @@ function openActivityInfo(activity, marker) {
 .distance-segmented__item:focus-visible {
   outline: 2px solid #969da8;
   outline-offset: 2px;
+}
+
+.map-location-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }
 </style>

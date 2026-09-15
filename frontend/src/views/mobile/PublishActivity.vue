@@ -52,7 +52,7 @@
         <van-field v-model="form.aaRule" label="AA规则" />
         <van-field v-model="form.description" label="说明" type="textarea" required />
         <van-field v-model="form.notes" label="注意事项" type="textarea" />
-        <van-cell title="需要审核">
+        <van-cell title="报名需发起人确认" label="开启后，报名申请需由你确认">
           <template #right-icon>
             <van-switch v-model="form.needApproval" size="20" />
           </template>
@@ -87,9 +87,9 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { showFailToast, showSuccessToast } from 'vant'
+import { showFailToast, showSuccessToast, showToast } from 'vant'
 import { createActivity, getActivity, updateActivity } from '../../api/activity'
 import AmapLocationPicker from '../../components/AmapLocationPicker.vue'
 import ImageCropper from '../../components/ImageCropper.vue'
@@ -107,6 +107,7 @@ const cropSourceUrl = ref('')
 const pendingCoverFile = ref(null)
 const pendingCoverPreviewUrl = ref('')
 const coverRemoved = ref(false)
+const locationCityAtSelection = ref('')
 const tagText = ref('AA制,新手友好')
 const coverFallback = 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=900&q=80'
 const categories = ['观影', '聚餐', '运动', '桌游', '学习', '探店', '户外', '游戏', '展览', '其他']
@@ -124,8 +125,8 @@ const form = reactive({
   signupDeadline: '2026-08-01T12:00:00',
   city: '北京',
   address: '',
-  longitude: 116.4,
-  latitude: 39.9,
+  longitude: null,
+  latitude: null,
   minParticipants: 2,
   maxParticipants: 6,
   costType: 'AA',
@@ -149,7 +150,7 @@ const hasCustomCover = computed(() => Boolean(
 ))
 
 const locationSummary = computed(() => {
-  if (!form.longitude || !form.latitude) return '未选择坐标'
+  if (form.longitude === null || form.latitude === null) return '未选择坐标'
   return `${form.longitude}, ${form.latitude}`
 })
 
@@ -168,7 +169,17 @@ function selectLocation(location) {
   form.address = location.address || form.address
   form.longitude = location.longitude
   form.latitude = location.latitude
+  locationCityAtSelection.value = form.city
 }
+
+watch(() => form.city, (city) => {
+  if (!locationCityAtSelection.value || city === locationCityAtSelection.value) return
+  form.address = ''
+  form.longitude = null
+  form.latitude = null
+  locationCityAtSelection.value = ''
+  showToast('城市已变更，请重新选择活动地点')
+})
 
 function chooseCover() {
   coverInputRef.value?.click()
@@ -222,6 +233,10 @@ async function submit() {
     showFailToast('报名截止时间不能晚于开始时间')
     return
   }
+  if (!form.address?.trim() || form.longitude === null || form.latitude === null) {
+    showFailToast('请先选择与活动城市一致的地点')
+    return
+  }
   loading.value = true
   try {
     const payload = { ...form, tags: tagText.value.split(',').map((item) => item.trim()).filter(Boolean) }
@@ -232,7 +247,7 @@ async function submit() {
     const data = isEdit.value
       ? await updateActivity(editId.value, payload, media)
       : await createActivity(payload, media)
-    showSuccessToast(isEdit.value ? '修改成功' : '发布成功')
+    showSuccessToast(isEdit.value ? '修改成功，已重新提交审核' : '发布成功，等待平台审核')
     router.push(`/activities/${data.id}`)
   } finally {
     loading.value = false
@@ -264,6 +279,7 @@ async function loadForEdit() {
       notes: data.notes || '',
       needApproval: Boolean(data.needApproval)
     })
+    locationCityAtSelection.value = form.city
     tagText.value = (data.tags || []).join(',')
     coverRemoved.value = false
   } finally {

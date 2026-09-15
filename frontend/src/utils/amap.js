@@ -28,7 +28,7 @@ export function loadAmap() {
   }
   amapPromise = new Promise((resolve, reject) => {
     const script = document.createElement('script')
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(config.key)}&plugin=AMap.Geolocation,AMap.PlaceSearch,AMap.Geocoder`
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${encodeURIComponent(config.key)}&plugin=AMap.Geolocation,AMap.PlaceSearch,AMap.Geocoder,AMap.AutoComplete`
     script.async = true
     script.onload = () => resolve(window.AMap)
     script.onerror = () => reject(new Error('高德地图加载失败，请检查 Key、安全密钥或网络'))
