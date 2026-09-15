@@ -28,7 +28,7 @@ public class FavoriteService {
     @Transactional(rollbackFor = Exception.class)
     public void favorite(Long activityId) {
         Long userId = UserContext.getUserId();
-        Activity activity = activityService.requireActivity(activityId);
+        Activity activity = activityService.requireApprovedActivity(activityId);
         ActivityFavorite existed = favoriteMapper.selectOne(new LambdaQueryWrapper<ActivityFavorite>()
                 .eq(ActivityFavorite::getActivityId, activityId)
                 .eq(ActivityFavorite::getUserId, userId)
@@ -72,10 +72,7 @@ public class FavoriteService {
     }
 
     public PageResult<FavoriteVO> myFavorites(long current, long size) {
-        var page = favoriteMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<ActivityFavorite>()
-                .eq(ActivityFavorite::getUserId, UserContext.getUserId())
-                .eq(ActivityFavorite::getDeleted, 0)
-                .orderByDesc(ActivityFavorite::getCreatedAt));
+        var page = favoriteMapper.selectApprovedPage(PageUtils.page(current, size), UserContext.getUserId());
         return new PageResult<>(page.getRecords().stream().map(this::toVO).toList(), page.getTotal(), page.getCurrent(), page.getSize());
     }
 

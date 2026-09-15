@@ -1,6 +1,8 @@
 package com.cityparty.module.activity.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.MybatisConfiguration;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.cityparty.common.exception.BusinessException;
 import com.cityparty.common.security.LoginUser;
 import com.cityparty.common.security.UserContext;
@@ -14,14 +16,17 @@ import com.cityparty.module.user.mapper.UserMapper;
 import com.cityparty.module.user.mapper.UserProfileMapper;
 import com.cityparty.module.waitlist.mapper.ActivityWaitlistMapper;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.apache.ibatis.builder.MapperBuilderAssistant;
 
 import java.time.LocalDateTime;
 
@@ -50,8 +55,18 @@ class ActivityServiceTest {
     private UserProfileMapper userProfileMapper;
     @Mock
     private ActivityWaitlistMapper waitlistMapper;
+    @Mock
+    private PublicActivityCacheService publicActivityCacheService;
     @InjectMocks
     private ActivityService activityService;
+
+    @BeforeAll
+    static void initMybatisPlusTableInfo() {
+        TableInfoHelper.initTableInfo(
+                new MapperBuilderAssistant(new MybatisConfiguration(), ""),
+                Activity.class
+        );
+    }
 
     @BeforeEach
     void setUp() {
@@ -94,6 +109,91 @@ class ActivityServiceTest {
                 .hasMessageContaining("end time");
 
         verify(activityMapper, never()).insert(any(Activity.class));
+    }
+
+    @Test
+    void createsEveryUserActivityAsPending() {
+        ActivityCreateDTO dto = activityDto();
+        dto.setNeedApproval(false);
+
+        activityService.create(dto);
+
+        ArgumentCaptor<Activity> captor = ArgumentCaptor.forClass(Activity.class);
+        verify(activityMapper).insert(captor.capture());
+        Activity saved = captor.getValue();
+        assertThat(saved.getAuditStatus()).isEqualTo("PENDING");
+        assertThat(saved.getRejectReason()).isNull();
+        assertThat(saved.getAuditTime()).isNull();
+        assertThat(saved.getReviewerId()).isNull();
+    }
+
+    @Test
+    void publicListCombinesAuditKeywordCategoryAndAuditTimeOrder() {
+        Page<Activity> emptyPage = new Page<>(1, 10);
+        emptyPage.setRecords(java.util.Collections.emptyList());
+        when(activityMapper.selectPage(any(), any())).thenReturn(emptyPage);
+
+        activityService.page("万达", "观影", null, null, null, 1, 10);
+
+        ArgumentCaptor<com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Activity>> captor =
+                ArgumentCaptor.forClass(com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper.class);
+        verify(activityMapper).selectPage(any(), captor.capture());
+        String sql = captor.getValue().getSqlSegment();
+        assertThat(sql).contains("audit_status", "category", "address", "audit_time");
+        assertThat(sql).containsIgnoringCase("ORDER BY");
+    }
+
+    @Test
+    void nearbyListRequiresApprovedAuditStatus() {
+        when(activityMapper.selectList(any())).thenReturn(java.util.Collections.emptyList());
+
+        activityService.nearby(
+                java.math.BigDecimal.valueOf(116.4),
+                java.math.BigDecimal.valueOf(39.9),
+                java.math.BigDecimal.valueOf(5),
+                null,
+                null,
+                null,
+                1,
+                10
+        );
+
+        ArgumentCaptor<com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Activity>> captor =
+                ArgumentCaptor.forClass(com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper.class);
+        verify(activityMapper).selectList(captor.capture());
+        assertThat(captor.getValue().getSqlSegment()).contains("audit_status");
+    }
+
+    @Test
+    void pendingDetailIsHiddenFromOtherUsers() {
+        Activity activity = manageableActivity();
+        activity.setCreatorId(99L);
+        activity.setAuditStatus("PENDING");
+        when(activityMapper.selectById(activity.getId())).thenReturn(activity);
+
+        assertThatThrownBy(() -> activityService.detail(activity.getId()))
+                .isInstanceOf(BusinessException.class)
+                .extracting("code")
+                .isEqualTo(404);
+    }
+
+    @Test
+    void rejectedActivityEditResubmitsAsPendingAndClearsAuditMetadata() {
+        Activity activity = manageableActivity();
+        activity.setAuditStatus("REJECTED");
+        activity.setRejectReason("地点信息不完整");
+        activity.setAuditTime(LocalDateTime.now().minusDays(1));
+        activity.setReviewerId(8L);
+        when(activityMapper.selectById(activity.getId())).thenReturn(activity);
+        when(waitlistMapper.selectCount(any())).thenReturn(0L);
+        when(favoriteMapper.selectCount(any())).thenReturn(0L);
+
+        activityService.update(activity.getId(), activityDto());
+
+        assertThat(activity.getAuditStatus()).isEqualTo("PENDING");
+        assertThat(activity.getRejectReason()).isNull();
+        assertThat(activity.getAuditTime()).isNull();
+        assertThat(activity.getReviewerId()).isNull();
     }
 
     @Test

@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -64,21 +65,36 @@ public class RecommendationService {
     public List<RecommendedActivityVO> recommendActivities(BigDecimal longitude,
                                                            BigDecimal latitude,
                                                            int limit) {
+        return recommendActivities(longitude, latitude, null, limit);
+    }
+
+    public List<RecommendedActivityVO> recommendActivities(BigDecimal longitude,
+                                                           BigDecimal latitude,
+                                                           String category,
+                                                           int limit) {
         validateLimit(limit);
         Long userId = UserContext.getUserId();
         userService.requireUser(userId);
+        String normalizedCategory = normalizeCategory(category);
         List<String> userInterests = userService.listInterestNames(userId);
-        String cacheKey = buildCacheKey(userId, longitude, latitude, limit, userInterests);
-        List<RecommendedActivityVO> cached = readCache(cacheKey);
-        if (cached != null) {
-            return cached;
-        }
-
         LocalDateTime now = LocalDateTime.now(clock);
         Set<Long> excludedActivityIds = findExcludedActivityIds(userId);
-        List<Activity> candidates = recallCandidates(userId, excludedActivityIds, now);
+        String cacheKey = buildCacheKey(
+                userId,
+                longitude,
+                latitude,
+                normalizedCategory,
+                limit,
+                userInterests
+        );
+        List<RecommendedActivityVO> cached = readCache(cacheKey);
+        if (cached != null) {
+            return revalidateCached(cached, userId, excludedActivityIds, now, normalizedCategory);
+        }
+
+        List<Activity> candidates = recallCandidates(userId, excludedActivityIds, now, normalizedCategory);
         List<Activity> eligibleCandidates = candidates.stream()
-                .filter(activity -> isEligible(activity, userId, excludedActivityIds, now))
+                .filter(activity -> isEligible(activity, userId, excludedActivityIds, now, normalizedCategory))
                 .toList();
         Map<Long, User> creators = loadCreators(eligibleCandidates);
 
@@ -118,9 +134,11 @@ public class RecommendationService {
 
     private List<Activity> recallCandidates(Long userId,
                                             Set<Long> excludedActivityIds,
-                                            LocalDateTime now) {
+                                            LocalDateTime now,
+                                            String category) {
         LambdaQueryWrapper<Activity> query = new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getDeleted, 0)
+                .eq(Activity::getAuditStatus, "APPROVED")
                 .in(Activity::getStatus, RECOMMENDABLE_STATUSES)
                 .gt(Activity::getStartTime, now)
                 .ge(Activity::getSignupDeadline, now)
@@ -131,6 +149,9 @@ public class RecommendationService {
         if (!excludedActivityIds.isEmpty()) {
             query.notIn(Activity::getId, excludedActivityIds);
         }
+        if (category != null) {
+            query.eq(Activity::getCategory, category);
+        }
         List<Activity> activities = activityMapper.selectList(query);
         return activities == null ? List.of() : activities;
     }
@@ -138,11 +159,14 @@ public class RecommendationService {
     private boolean isEligible(Activity activity,
                                Long userId,
                                Set<Long> excludedActivityIds,
-                               LocalDateTime now) {
+                               LocalDateTime now,
+                               String category) {
         return activity != null
                 && activity.getId() != null
                 && Integer.valueOf(0).equals(activity.getDeleted())
+                && "APPROVED".equals(activity.getAuditStatus())
                 && RECOMMENDABLE_STATUSES.contains(activity.getStatus())
+                && (category == null || category.equals(activity.getCategory()))
                 && !Objects.equals(activity.getCreatorId(), userId)
                 && activity.getStartTime() != null
                 && activity.getStartTime().isAfter(now)
@@ -262,6 +286,7 @@ public class RecommendationService {
     private String buildCacheKey(Long userId,
                                  BigDecimal longitude,
                                  BigDecimal latitude,
+                                 String category,
                                  int limit,
                                  Collection<String> userInterests) {
         String location = "none";
@@ -272,7 +297,48 @@ public class RecommendationService {
                 String.join("|", scorer.normalize(userInterests)).hashCode(),
                 36
         );
-        return CACHE_PREFIX + ":" + userId + ":" + location + ":" + limit + ":" + interestFingerprint;
+        String categoryFingerprint = category == null
+                ? "all"
+                : Integer.toUnsignedString(category.hashCode(), 36);
+        return CACHE_PREFIX + ":" + userId + ":" + location + ":" + categoryFingerprint
+                + ":" + limit + ":" + interestFingerprint;
+    }
+
+    private List<RecommendedActivityVO> revalidateCached(List<RecommendedActivityVO> cached,
+                                                         Long userId,
+                                                         Set<Long> excludedActivityIds,
+                                                         LocalDateTime now,
+                                                         String category) {
+        Set<Long> activityIds = new HashSet<>();
+        cached.stream()
+                .map(RecommendedActivityVO::getActivity)
+                .filter(Objects::nonNull)
+                .map(ActivityVO::getId)
+                .filter(Objects::nonNull)
+                .forEach(activityIds::add);
+        if (activityIds.isEmpty()) {
+            return List.of();
+        }
+        List<Activity> currentActivities = activityMapper.selectBatchIds(activityIds);
+        Map<Long, Activity> currentById = new HashMap<>();
+        if (currentActivities != null) {
+            currentActivities.stream()
+                    .filter(activity -> isEligible(activity, userId, excludedActivityIds, now, category))
+                    .forEach(activity -> currentById.put(activity.getId(), activity));
+        }
+        return cached.stream()
+                .filter(item -> item.getActivity() != null)
+                .filter(item -> currentById.containsKey(item.getActivity().getId()))
+                .peek(item -> {
+                    ActivityVO current = activityService.toVO(currentById.get(item.getActivity().getId()));
+                    current.setDistanceKm(item.getDistanceKm());
+                    item.setActivity(current);
+                })
+                .toList();
+    }
+
+    private String normalizeCategory(String category) {
+        return StringUtils.hasText(category) ? category.trim() : null;
     }
 
     private String roundedCoordinate(BigDecimal coordinate) {

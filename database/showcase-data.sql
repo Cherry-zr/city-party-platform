@@ -132,6 +132,10 @@ INSERT INTO activity (creator_id,title,category,tags,start_time,end_time,signup_
 (@showcase_host_a,'公园轻松夜跑','运动','夜跑,公园,轻量运动',DATE_ADD(NOW(),INTERVAL 1 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 1 DAY),INTERVAL 90 MINUTE),DATE_ADD(NOW(),INTERVAL 12 HOUR),'北京','龙潭中湖公园北门',116.443100,39.884500,3,12,'FREE',0,NULL,'/showcase/covers/night-run.svg','五公里轻松配速，跑前热身、跑后拉伸，适合恢复跑和入门跑者。','[CITY_PARTY_SHOWCASE] night-run',0,'SIGNING',3,4,DATE_SUB(NOW(),INTERVAL 50 MINUTE),NOW(),0),
 (@showcase_host_b,'咖啡馆编程学习局','学习','编程,自习,结伴学习',DATE_ADD(NOW(),INTERVAL 5 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 5 DAY),INTERVAL 4 HOUR),DATE_ADD(NOW(),INTERVAL 4 DAY),'北京','朝阳门社区咖啡空间',116.435500,39.922600,2,10,'ESTIMATE',38,'饮品各自结算','/showcase/covers/coding-study.svg','专注学习三轮，每轮五十分钟，中间安排短暂交流和问题分享。','[CITY_PARTY_SHOWCASE] coding-study',1,'SIGNING',3,5,DATE_SUB(NOW(),INTERVAL 60 MINUTE),NOW(),0);
 
+UPDATE activity
+SET audit_status = 'APPROVED', audit_time = created_at
+WHERE notes LIKE '[CITY_PARTY_SHOWCASE]%';
+
 SET @showcase_badminton=(SELECT id FROM activity WHERE BINARY title='周末羽毛球搭子' AND notes LIKE @showcase_marker);
 SET @showcase_board_game=(SELECT id FROM activity WHERE BINARY title='东城桌游新手局' AND notes LIKE @showcase_marker);
 SET @showcase_photowalk=(SELECT id FROM activity WHERE BINARY title='城市摄影漫步' AND notes LIKE @showcase_marker);

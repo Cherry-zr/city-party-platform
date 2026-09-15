@@ -33,6 +33,10 @@ public class ActivityVO {
     private String description;
     private String notes;
     private Boolean needApproval;
+    private String auditStatus;
+    private String rejectReason;
+    private LocalDateTime auditTime;
+    private Long reviewerId;
     private String status;
     private Integer approvedCount;
     private Integer favoriteCount;

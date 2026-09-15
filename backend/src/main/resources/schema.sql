@@ -88,6 +88,10 @@ CREATE TABLE activity (
   description TEXT NOT NULL,
   notes VARCHAR(1000) NULL,
   need_approval TINYINT NOT NULL DEFAULT 0,
+  audit_status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/APPROVED/REJECTED',
+  reject_reason VARCHAR(500) NULL,
+  audit_time DATETIME NULL,
+  reviewer_id BIGINT NULL,
   status VARCHAR(20) NOT NULL DEFAULT 'SIGNING' COMMENT 'SIGNING/FULL/UPCOMING/ONGOING/FINISHED/CANCELLED',
   approved_count INT NOT NULL DEFAULT 0,
   favorite_count INT NOT NULL DEFAULT 0,
@@ -98,6 +102,8 @@ CREATE TABLE activity (
   INDEX idx_activity_category (category),
   INDEX idx_activity_city (city),
   INDEX idx_activity_status (status),
+  INDEX idx_activity_public_audit_time (audit_status, deleted, audit_time, id),
+  INDEX idx_activity_public_category_time (audit_status, deleted, category, audit_time, id),
   INDEX idx_activity_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='activity';
 

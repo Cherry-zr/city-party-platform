@@ -111,6 +111,7 @@ class ActivityChatServiceTest {
         activity.setId(id);
         activity.setCreatorId(creatorId);
         activity.setTitle("Movie Night");
+        activity.setAuditStatus("APPROVED");
         activity.setDeleted(0);
         return activity;
     }

@@ -27,7 +27,8 @@ public class RecommendationController {
     public Result<List<RecommendedActivityVO>> activities(
             @RequestParam(required = false) BigDecimal longitude,
             @RequestParam(required = false) BigDecimal latitude,
+            @RequestParam(required = false) String category,
             @RequestParam(defaultValue = "6") int limit) {
-        return Result.ok(recommendationService.recommendActivities(longitude, latitude, limit));
+        return Result.ok(recommendationService.recommendActivities(longitude, latitude, category, limit));
     }
 }

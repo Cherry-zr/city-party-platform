@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -118,6 +119,49 @@ class RecommendationServiceTest {
         Activity candidate = activity(20L, "已参与活动", "SIGNING", "周末");
         when(signupMapper.selectList(any())).thenReturn(List.of(signup(candidate.getId(), status)));
         stubCandidates(List.of(candidate));
+
+        assertThat(service.recommendActivities(null, null, 6)).isEmpty();
+    }
+
+    @Test
+    void excludesPendingAndRejectedActivities() {
+        Activity pending = activity(21L, "待审核", "SIGNING", "周末");
+        pending.setAuditStatus("PENDING");
+        Activity rejected = activity(22L, "已拒绝", "SIGNING", "周末");
+        rejected.setAuditStatus("REJECTED");
+        Activity approved = activity(23L, "已通过", "SIGNING", "周末");
+        stubCandidates(List.of(pending, rejected, approved));
+
+        List<RecommendedActivityVO> result = service.recommendActivities(null, null, 6);
+
+        assertThat(result).extracting(item -> item.getActivity().getId()).containsExactly(23L);
+    }
+
+    @Test
+    void categoryFilterOnlyChangesCandidateSet() {
+        Activity movie = activity(24L, "电影活动", "SIGNING", "周末");
+        movie.setCategory("观影");
+        Activity sports = activity(25L, "运动活动", "SIGNING", "周末");
+        sports.setCategory("运动");
+        stubCandidates(List.of(movie, sports));
+
+        List<RecommendedActivityVO> result =
+                service.recommendActivities(null, null, "观影", 6);
+
+        assertThat(result).extracting(item -> item.getActivity().getId()).containsExactly(24L);
+        assertThat(result.get(0).getScoreDetail()).isNotNull();
+    }
+
+    @Test
+    void cachedRejectedActivityIsRemovedDuringRevalidation() throws Exception {
+        RecommendedActivityVO cached = new RecommendedActivityVO();
+        ActivityVO cachedActivity = new ActivityVO();
+        cachedActivity.setId(26L);
+        cached.setActivity(cachedActivity);
+        when(values.get(anyString())).thenReturn(objectMapper.writeValueAsString(List.of(cached)));
+        Activity rejected = activity(26L, "刚被拒绝", "SIGNING", "周末");
+        rejected.setAuditStatus("REJECTED");
+        when(activityMapper.selectBatchIds(anyCollection())).thenReturn(List.of(rejected));
 
         assertThat(service.recommendActivities(null, null, 6)).isEmpty();
     }
@@ -232,7 +276,7 @@ class RecommendationServiceTest {
     }
 
     @Test
-    void cacheHitAvoidsCandidateAndCreatorQueries() throws Exception {
+    void cacheHitRevalidatesActivityBeforeReturning() throws Exception {
         RecommendedActivityVO cached = new RecommendedActivityVO();
         ActivityVO activity = new ActivityVO();
         activity.setId(80L);
@@ -241,11 +285,15 @@ class RecommendationServiceTest {
         cached.setReasons(List.of("匹配你的兴趣：周末"));
         cached.setScoreDetail(new RecommendationScoreDetailVO());
         when(values.get(anyString())).thenReturn(objectMapper.writeValueAsString(List.of(cached)));
+        Activity current = activity(80L, "缓存活动", "SIGNING", "周末");
+        when(activityMapper.selectBatchIds(anyCollection())).thenReturn(List.of(current));
 
         List<RecommendedActivityVO> result = service.recommendActivities(decimal(116.4), decimal(39.9), 3);
 
         assertThat(result).singleElement().extracting(item -> item.getActivity().getId()).isEqualTo(80L);
-        verifyNoInteractions(activityMapper, userMapper, activityService);
+        verify(activityMapper).selectBatchIds(anyCollection());
+        verify(activityService).toVO(current);
+        verifyNoInteractions(userMapper);
     }
 
     @Test
@@ -284,6 +332,7 @@ class RecommendationServiceTest {
         activity.setApprovedCount(2);
         activity.setFavoriteCount(1);
         activity.setStatus(status);
+        activity.setAuditStatus("APPROVED");
         activity.setDeleted(0);
         return activity;
     }

@@ -151,6 +151,7 @@ public class UserService {
         vo.setInterestTags(listInterestNames(userId));
         vo.setCreatedActivityCount(activityMapper.selectCount(new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getCreatorId, userId)
+                .eq(Activity::getAuditStatus, "APPROVED")
                 .eq(Activity::getDeleted, 0)));
         vo.setJoinedActivityCount(signupMapper.selectCount(new LambdaQueryWrapper<ActivitySignup>()
                 .eq(ActivitySignup::getUserId, userId)
@@ -158,8 +159,10 @@ public class UserService {
                 .eq(ActivitySignup::getDeleted, 0)));
         Page<Activity> page = activityMapper.selectPage(new Page<>(1, 10), new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getCreatorId, userId)
+                .eq(Activity::getAuditStatus, "APPROVED")
                 .eq(Activity::getDeleted, 0)
-                .orderByDesc(Activity::getCreatedAt));
+                .orderByDesc(Activity::getAuditTime)
+                .orderByDesc(Activity::getId));
         vo.setPublicActivities(page.getRecords().stream().map(activityService::toVO).toList());
         return vo;
     }

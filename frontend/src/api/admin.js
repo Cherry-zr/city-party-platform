@@ -67,3 +67,7 @@ export function adminNotices(params) {
 export function adminReports(params) {
   return request.get('/api/admin/reports', { params })
 }
+
+export function adminAuditActivity(id, data) {
+  return request.patch('/api/admin/activities/' + id + '/audit', data)
+}

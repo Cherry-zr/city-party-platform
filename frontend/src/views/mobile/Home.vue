@@ -2,7 +2,7 @@
   <van-nav-bar title="同城活动" right-text="后台" @click-right="goAdmin" />
   <div class="mobile-content">
     <van-search v-model="query.keyword" placeholder="搜索活动、地点、说明" @search="load" />
-    <van-tabs v-model:active="query.category" sticky @change="load">
+    <van-tabs v-model:active="query.category" sticky @change="handleCategoryChange">
       <van-tab title="全部" name="" />
       <van-tab v-for="item in categories" :key="item" :title="item" :name="item" />
     </van-tabs>
@@ -78,6 +78,9 @@ async function loadRecommendations(location = recommendationLocation.value) {
   recommendationError.value = false
   try {
     const params = { limit: 6 }
+    if (query.category) {
+      params.category = query.category
+    }
     if (location) {
       params.longitude = location.longitude
       params.latitude = location.latitude
@@ -88,6 +91,13 @@ async function loadRecommendations(location = recommendationLocation.value) {
     recommendationError.value = true
   } finally {
     recommendationLoading.value = false
+  }
+}
+
+function handleCategoryChange() {
+  load()
+  if (auth.isLogin) {
+    loadRecommendations()
   }
 }
 
