@@ -16,9 +16,6 @@ public class RegisterDTO {
     private String nickname;
     private String city;
 
-    @NotBlank(message = "验证码 key 不能为空")
-    private String captchaKey;
-
-    @NotBlank(message = "验证码不能为空")
-    private String captchaCode;
+    @NotBlank(message = "注册验证令牌不能为空")
+    private String captchaToken;
 }
