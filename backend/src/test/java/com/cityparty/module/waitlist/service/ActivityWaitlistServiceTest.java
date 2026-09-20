@@ -89,7 +89,7 @@ class ActivityWaitlistServiceTest {
     @Test
     void joinWaitlistCreatesWaitingSignupAndQueueEntry() {
         Activity activity = fullActivity();
-        when(activityService.requireActivity(10L)).thenReturn(activity);
+        when(activityService.requireApprovedActivity(10L)).thenReturn(activity);
         when(signupMapper.selectOne(any())).thenReturn(null);
         when(waitlistMapper.selectOne(any())).thenReturn(null);
         doAnswer(invocation -> {
@@ -123,7 +123,7 @@ class ActivityWaitlistServiceTest {
         Activity activity = fullActivity();
         activity.setApprovedCount(1);
         activity.setMaxParticipants(2);
-        when(activityService.requireActivity(10L)).thenReturn(activity);
+        when(activityService.requireApprovedActivity(10L)).thenReturn(activity);
 
         assertThatThrownBy(() -> waitlistService.joinWaitlist(10L))
                 .isInstanceOf(BusinessException.class);
@@ -185,6 +185,7 @@ class ActivityWaitlistServiceTest {
         activity.setCreatorId(1L);
         activity.setTitle("Activity");
         activity.setStatus("FULL");
+        activity.setAuditStatus("APPROVED");
         activity.setApprovedCount(2);
         activity.setMaxParticipants(2);
         activity.setDeleted(0);

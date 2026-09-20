@@ -1,5 +1,7 @@
 package com.cityparty.module.activity.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
@@ -31,6 +33,13 @@ public class Activity {
     private String description;
     private String notes;
     private Integer needApproval;
+    private String auditStatus;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private String rejectReason;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private LocalDateTime auditTime;
+    @TableField(updateStrategy = FieldStrategy.ALWAYS)
+    private Long reviewerId;
     private String status;
     private Integer approvedCount;
     private Integer favoriteCount;

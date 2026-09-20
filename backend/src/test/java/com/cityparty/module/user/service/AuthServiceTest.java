@@ -5,7 +5,9 @@ import com.cityparty.common.security.JwtUtils;
 import com.cityparty.common.security.LoginUser;
 import com.cityparty.common.utils.PasswordUtils;
 import com.cityparty.module.user.dto.LoginDTO;
+import com.cityparty.module.user.dto.RegisterDTO;
 import com.cityparty.module.user.entity.User;
+import com.cityparty.module.user.entity.UserProfile;
 import com.cityparty.module.user.mapper.UserMapper;
 import com.cityparty.module.user.mapper.UserProfileMapper;
 import com.cityparty.module.user.vo.LoginVO;
@@ -24,6 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,14 +55,19 @@ class AuthServiceTest {
     private JwtUtils jwtUtils;
     @Mock
     private UserService userService;
+    @Mock
+    private RegistrationCaptchaService registrationCaptchaService;
+    @Mock
+    private RegistrationRateLimitService registrationRateLimitService;
 
     @InjectMocks
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get("captcha:" + CAPTCHA_KEY)).thenReturn(CAPTCHA_CODE);
+        lenient().when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(valueOperations.get("captcha:" + CAPTCHA_KEY)).thenReturn(CAPTCHA_CODE);
+        lenient().when(valueOperations.getAndDelete("captcha:" + CAPTCHA_KEY)).thenReturn(CAPTCHA_CODE);
     }
 
     @Test
@@ -126,6 +136,44 @@ class AuthServiceTest {
         verify(userMapper, never()).updateById(any(User.class));
     }
 
+    @Test
+    void correctRegistrationTokenCreatesUserAndConsumesSecurityChecks() {
+        RegisterDTO dto = registerDTO("valid-token");
+        when(passwordUtils.encode(RAW_PASSWORD)).thenReturn(PBKDF2_HASH);
+        doAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(20L);
+            return 1;
+        }).when(userMapper).insert(any(User.class));
+        UserMeVO userVO = new UserMeVO();
+        userVO.setId(20L);
+        when(jwtUtils.generateToken(any(LoginUser.class))).thenReturn("register-token");
+        when(userService.getMe(20L)).thenReturn(userVO);
+
+        LoginVO result = authService.register(dto, "127.0.0.1");
+
+        assertThat(result.getToken()).isEqualTo("register-token");
+        verify(registrationRateLimitService).checkRegistration("127.0.0.1");
+        verify(registrationCaptchaService).consumeToken("valid-token", "127.0.0.1");
+        verify(userMapper).insert(any(User.class));
+        verify(userProfileMapper).insert(any(UserProfile.class));
+    }
+
+    @Test
+    void missingRegistrationCaptchaBlocksDatabaseWrite() {
+        RegisterDTO dto = registerDTO(null);
+        doThrow(new BusinessException("注册验证令牌无效"))
+                .when(registrationCaptchaService)
+                .consumeToken(null, "127.0.0.1");
+
+        assertThatThrownBy(() -> authService.register(dto, "127.0.0.1"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("验证令牌");
+
+        verify(userMapper, never()).insert(any(User.class));
+        verify(userProfileMapper, never()).insert(any(UserProfile.class));
+    }
+
     private void prepareLoginResponse(User user) {
         when(jwtUtils.generateToken(any(LoginUser.class))).thenReturn("test-token");
         when(userService.getMe(user.getId())).thenReturn(new UserMeVO());
@@ -137,6 +185,16 @@ class AuthServiceTest {
         dto.setPassword(RAW_PASSWORD);
         dto.setCaptchaKey(CAPTCHA_KEY);
         dto.setCaptchaCode(CAPTCHA_CODE);
+        return dto;
+    }
+
+    private RegisterDTO registerDTO(String captchaToken) {
+        RegisterDTO dto = new RegisterDTO();
+        dto.setUsername("new-user");
+        dto.setPassword(RAW_PASSWORD);
+        dto.setNickname("新用户");
+        dto.setCity("北京");
+        dto.setCaptchaToken(captchaToken);
         return dto;
     }
 

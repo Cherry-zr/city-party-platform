@@ -105,9 +105,17 @@ public class AdminService {
     public PageResult<ActivityVO> activities(String keyword,
                                              String category,
                                              String status,
+                                             String auditStatus,
                                              long current,
                                              long size) {
-        return activityService.page(keyword, category, null, null, status, safeCurrent(current), safeSize(size));
+        return activityService.adminPage(
+                keyword,
+                category,
+                status,
+                auditStatus,
+                safeCurrent(current),
+                safeSize(size)
+        );
     }
 
     public ActivityVO activityDetail(Long id) {

@@ -59,7 +59,7 @@ class SignupServiceTest {
 
     @Test
     void createsApprovedSignupWhenSeatIsAvailable() {
-        when(activityService.requireActivity(10L)).thenReturn(joinableActivity());
+        when(activityService.requireApprovedActivity(10L)).thenReturn(joinableActivity());
         when(signupMapper.selectOne(any())).thenReturn(null);
         when(activityService.increaseApprovedCountIfAvailable(10L)).thenReturn(true);
         doAnswer(invocation -> {
@@ -86,7 +86,7 @@ class SignupServiceTest {
 
     @Test
     void rejectsDuplicateActiveSignup() {
-        when(activityService.requireActivity(10L)).thenReturn(joinableActivity());
+        when(activityService.requireApprovedActivity(10L)).thenReturn(joinableActivity());
         when(signupMapper.selectOne(any())).thenReturn(signup("APPROVED"));
 
         assertThatThrownBy(() -> signupService.signup(10L, new SignupCreateDTO()))
@@ -101,7 +101,7 @@ class SignupServiceTest {
         Activity activity = joinableActivity();
         activity.setApprovedCount(1);
         activity.setMaxParticipants(2);
-        when(activityService.requireActivity(10L)).thenReturn(activity);
+        when(activityService.requireApprovedActivity(10L)).thenReturn(activity);
         when(signupMapper.selectOne(any())).thenReturn(null);
         when(activityService.increaseApprovedCountIfAvailable(10L)).thenReturn(false);
 
@@ -174,7 +174,7 @@ class SignupServiceTest {
     void rejectsSignupAfterActivityCancelledOrFinished() {
         Activity activity = joinableActivity();
         activity.setStatus("CANCELLED");
-        when(activityService.requireActivity(10L)).thenReturn(activity);
+        when(activityService.requireApprovedActivity(10L)).thenReturn(activity);
 
         assertThatThrownBy(() -> signupService.signup(10L, new SignupCreateDTO()))
                 .isInstanceOf(BusinessException.class);
@@ -194,6 +194,7 @@ class SignupServiceTest {
         activity.setCreatorId(1L);
         activity.setStatus("SIGNING");
         activity.setNeedApproval(0);
+        activity.setAuditStatus("APPROVED");
         activity.setApprovedCount(0);
         activity.setMaxParticipants(2);
         activity.setDeleted(0);

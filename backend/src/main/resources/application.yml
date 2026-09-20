@@ -44,10 +44,19 @@ city-party:
   cors:
     allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS:*}
   jwt:
-    secret: ${JWT_SECRET:city-party-local-development-secret-change-me}
+    secret: ${JWT_SECRET}
     expire-minutes: ${JWT_EXPIRE_MINUTES:4320}
   password:
     salt: ${PASSWORD_SALT:cityparty}
+  security:
+    trusted-proxies: ${TRUSTED_PROXIES:}
+    registration:
+      max-attempts: ${REGISTRATION_MAX_ATTEMPTS:5}
+      window-seconds: ${REGISTRATION_WINDOW_SECONDS:600}
+      challenge-max-attempts: ${REGISTRATION_CHALLENGE_MAX_ATTEMPTS:20}
+      challenge-window-seconds: ${REGISTRATION_CHALLENGE_WINDOW_SECONDS:300}
+      verify-max-attempts: ${REGISTRATION_VERIFY_MAX_ATTEMPTS:30}
+      verify-window-seconds: ${REGISTRATION_VERIFY_WINDOW_SECONDS:300}
   upload:
     base-dir: ${UPLOAD_BASE_DIR:uploads}
     avatar-dir: avatar

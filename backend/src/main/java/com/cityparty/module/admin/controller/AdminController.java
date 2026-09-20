@@ -3,6 +3,8 @@ package com.cityparty.module.admin.controller;
 import com.cityparty.common.result.PageResult;
 import com.cityparty.common.result.Result;
 import com.cityparty.module.activity.vo.ActivityVO;
+import com.cityparty.module.admin.dto.ActivityAuditDTO;
+import com.cityparty.module.admin.service.ActivityAuditService;
 import com.cityparty.module.admin.service.AdminService;
 import com.cityparty.module.admin.service.DashboardService;
 import com.cityparty.module.admin.vo.DashboardAnalyticsVO;
@@ -16,9 +18,12 @@ import com.cityparty.module.signup.vo.SignupVO;
 import com.cityparty.module.waitlist.vo.ActivityWaitlistVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,6 +38,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final DashboardService dashboardService;
+    private final ActivityAuditService activityAuditService;
 
     @Operation(summary = "运营看板首页概览")
     @GetMapping("/dashboard/overview")
@@ -87,15 +93,23 @@ public class AdminController {
     public Result<PageResult<ActivityVO>> activities(@RequestParam(required = false) String keyword,
                                                       @RequestParam(required = false) String category,
                                                       @RequestParam(required = false) String status,
+                                                      @RequestParam(required = false) String auditStatus,
                                                       @RequestParam(defaultValue = "1") Long current,
                                                       @RequestParam(defaultValue = "10") Long size) {
-        return Result.ok(adminService.activities(keyword, category, status, current, size));
+        return Result.ok(adminService.activities(keyword, category, status, auditStatus, current, size));
     }
 
     @Operation(summary = "活动管理详情")
     @GetMapping("/activities/{id}")
     public Result<ActivityVO> activityDetail(@PathVariable Long id) {
         return Result.ok(adminService.activityDetail(id));
+    }
+
+    @Operation(summary = "审核活动")
+    @PatchMapping("/activities/{id}/audit")
+    public Result<ActivityVO> auditActivity(@PathVariable Long id,
+                                            @Valid @RequestBody ActivityAuditDTO dto) {
+        return Result.ok(activityAuditService.audit(id, dto));
     }
 
     @Operation(summary = "活动报名用户")

@@ -40,7 +40,7 @@ public class ActivityWaitlistService {
     @Transactional(rollbackFor = Exception.class)
     public ActivityWaitlistVO joinWaitlist(Long activityId) {
         Long userId = UserContext.getUserId();
-        Activity activity = activityService.requireActivity(activityId);
+        Activity activity = activityService.requireApprovedActivity(activityId);
         if (activity.getCreatorId().equals(userId)) {
             throw new BusinessException("不能候补自己发起的活动");
         }

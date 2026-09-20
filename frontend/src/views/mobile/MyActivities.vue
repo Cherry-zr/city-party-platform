@@ -19,19 +19,42 @@
       <div v-for="item in currentState.items" :key="item.id" class="plain-panel activity-list-item">
         <div class="activity-list-status">
           <van-tag :type="statusType(item.status)">{{ statusText(item.status, item) }}</van-tag>
+          <van-tag
+            v-if="activeType === 'published'"
+            :type="auditStatusType(item.auditStatus)"
+            plain
+          >
+            {{ auditStatusText(item.auditStatus) }}
+          </van-tag>
           <span v-if="activeType === 'waiting'" class="activity-meta">当前处于候补队列</span>
         </div>
-        <ActivityCard :activity="item" @click="$router.push(`/activities/${item.id}`)" />
-        <van-button
-          v-if="activeType === 'published'"
-          size="small"
-          type="primary"
-          plain
-          :loading="signupsLoading && currentActivityId === item.id"
-          @click="openSignups(item)"
+        <div
+          v-if="activeType === 'published' && item.auditStatus === 'REJECTED'"
+          class="audit-rejection"
         >
-          查看报名申请
-        </van-button>
+          <strong>未通过原因：</strong>{{ item.rejectReason || '管理员未填写原因' }}
+        </div>
+        <ActivityCard :activity="item" @click="$router.push(`/activities/${item.id}`)" />
+        <van-space v-if="activeType === 'published'">
+          <van-button
+            v-if="item.auditStatus === 'REJECTED'"
+            size="small"
+            type="warning"
+            plain
+            @click="editActivity(item)"
+          >
+            修改并重新提交
+          </van-button>
+          <van-button
+            size="small"
+            type="primary"
+            plain
+            :loading="signupsLoading && currentActivityId === item.id"
+            @click="openSignups(item)"
+          >
+            查看报名申请
+          </van-button>
+        </van-space>
       </div>
       <van-empty
         v-if="currentState.finished && currentState.items.length === 0"
@@ -154,6 +177,10 @@ function retry() {
   loadMore()
 }
 
+function editActivity(activity) {
+  router.push({ path: '/publish', query: { editId: activity.id } })
+}
+
 async function openSignups(activity) {
   currentActivityId.value = activity.id
   showSignups.value = true
@@ -206,6 +233,21 @@ function statusType(status) {
   return 'default'
 }
 
+function auditStatusText(status) {
+  const map = {
+    PENDING: '平台待审核',
+    APPROVED: '平台已通过',
+    REJECTED: '平台已拒绝'
+  }
+  return map[status] || '平台待审核'
+}
+
+function auditStatusType(status) {
+  if (status === 'APPROVED') return 'success'
+  if (status === 'REJECTED') return 'danger'
+  return 'warning'
+}
+
 function signupStatusText(status) {
   const map = {
     PENDING: '待审核',
@@ -235,6 +277,17 @@ function signupStatusText(status) {
   align-items: center;
   gap: 8px;
   padding: 2px 2px 10px;
+}
+
+.audit-rejection {
+  margin: 0 2px 10px;
+  padding: 9px 10px;
+  border: 1px solid #f5c2c7;
+  border-radius: 6px;
+  background: #fff5f5;
+  color: #b42318;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .signup-popup {

@@ -36,7 +36,7 @@ public class SignupService {
     @Transactional(rollbackFor = Exception.class)
     public SignupVO signup(Long activityId, SignupCreateDTO dto) {
         Long userId = UserContext.getUserId();
-        Activity activity = activityService.requireActivity(activityId);
+        Activity activity = activityService.requireApprovedActivity(activityId);
         if (activity.getCreatorId().equals(userId)) {
             throw new BusinessException("不能报名自己发起的活动");
         }
@@ -137,10 +137,10 @@ public class SignupService {
     }
 
     public PageResult<SignupVO> mySignups(long current, long size) {
-        Page<ActivitySignup> page = signupMapper.selectPage(PageUtils.page(current, size), new LambdaQueryWrapper<ActivitySignup>()
-                .eq(ActivitySignup::getUserId, UserContext.getUserId())
-                .eq(ActivitySignup::getDeleted, 0)
-                .orderByDesc(ActivitySignup::getCreatedAt));
+        Page<ActivitySignup> page = signupMapper.selectApprovedPage(
+                PageUtils.page(current, size),
+                UserContext.getUserId()
+        );
         return new PageResult<>(page.getRecords().stream().map(this::toVO).toList(), page.getTotal(), page.getCurrent(), page.getSize());
     }
 

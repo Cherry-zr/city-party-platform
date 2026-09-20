@@ -3,7 +3,7 @@
     <div class="admin-page-heading">
       <div>
         <h1>活动管理</h1>
-        <p>按状态筛选活动，并查看活动、报名及候补详情</p>
+        <p>审核用户发布的活动，并查看活动、报名及候补详情</p>
       </div>
     </div>
     <div class="admin-card">
@@ -17,6 +17,11 @@
         <el-form-item label="状态">
           <el-select v-model="query.status" clearable placeholder="全部状态" style="width: 160px">
             <el-option v-for="item in activityStatuses" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="审核状态">
+          <el-select v-model="query.auditStatus" clearable placeholder="全部审核状态" style="width: 160px">
+            <el-option v-for="item in auditStatuses" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -43,9 +48,34 @@
             <el-tag :type="statusType(row.status)">{{ statusText(row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="90" fixed="right">
+        <el-table-column label="审核" width="110">
+          <template #default="{ row }">
+            <el-tag :type="auditStatusType(row.auditStatus)">
+              {{ auditStatusText(row.auditStatus) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="210" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="showDetail(row.id)">详情</el-button>
+            <el-button
+              v-if="row.auditStatus !== 'APPROVED'"
+              link
+              type="success"
+              :loading="auditLoadingId === row.id"
+              @click="audit(row, 'APPROVED')"
+            >
+              通过
+            </el-button>
+            <el-button
+              v-if="row.auditStatus !== 'REJECTED'"
+              link
+              type="danger"
+              :loading="auditLoadingId === row.id"
+              @click="audit(row, 'REJECTED')"
+            >
+              拒绝
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -65,6 +95,7 @@
           <el-descriptions :column="2" border>
             <el-descriptions-item label="活动 ID">{{ detail.id }}</el-descriptions-item>
             <el-descriptions-item label="状态">{{ statusText(detail.status) }}</el-descriptions-item>
+            <el-descriptions-item label="审核状态">{{ auditStatusText(detail.auditStatus) }}</el-descriptions-item>
             <el-descriptions-item label="标题" :span="2">{{ detail.title }}</el-descriptions-item>
             <el-descriptions-item label="发起人">{{ detail.creatorNickname }}</el-descriptions-item>
             <el-descriptions-item label="分类">{{ detail.category }}</el-descriptions-item>
@@ -75,7 +106,29 @@
             <el-descriptions-item label="地点" :span="2">{{ detail.city }} {{ detail.address }}</el-descriptions-item>
             <el-descriptions-item label="活动说明" :span="2">{{ detail.description }}</el-descriptions-item>
             <el-descriptions-item label="注意事项" :span="2">{{ detail.notes || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="拒绝原因" :span="2">{{ detail.rejectReason || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="审核时间">{{ formatDateTime(detail.auditTime) }}</el-descriptions-item>
+            <el-descriptions-item label="审核管理员 ID">{{ detail.reviewerId || '-' }}</el-descriptions-item>
           </el-descriptions>
+          <div class="admin-detail-actions">
+            <el-button
+              v-if="detail.auditStatus !== 'APPROVED'"
+              type="success"
+              :loading="auditLoadingId === detail.id"
+              @click="audit(detail, 'APPROVED')"
+            >
+              审核通过
+            </el-button>
+            <el-button
+              v-if="detail.auditStatus !== 'REJECTED'"
+              type="danger"
+              plain
+              :loading="auditLoadingId === detail.id"
+              @click="audit(detail, 'REJECTED')"
+            >
+              审核拒绝
+            </el-button>
+          </div>
 
           <el-tabs v-model="detailTab" class="admin-detail-tabs">
             <el-tab-pane :label="`报名用户 (${signupRows.length})`" name="signups">
@@ -114,8 +167,10 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   adminActivities,
+  adminAuditActivity,
   adminActivityDetail,
   adminActivitySignups,
   adminActivityWaitlist
@@ -130,7 +185,12 @@ const activityStatuses = [
   { label: '已结束', value: 'FINISHED' },
   { label: '已取消', value: 'CANCELLED' }
 ]
-const query = reactive({ keyword: '', category: '', status: '', current: 1, size: 10 })
+const auditStatuses = [
+  { label: '待审核', value: 'PENDING' },
+  { label: '已通过', value: 'APPROVED' },
+  { label: '已拒绝', value: 'REJECTED' }
+]
+const query = reactive({ keyword: '', category: '', status: '', auditStatus: 'PENDING', current: 1, size: 10 })
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
@@ -140,6 +200,7 @@ const detail = ref(null)
 const detailTab = ref('signups')
 const signupRows = ref([])
 const waitlistRows = ref([])
+const auditLoadingId = ref(null)
 
 async function load() {
   loading.value = true
@@ -158,8 +219,40 @@ function search() {
 }
 
 function reset() {
-  Object.assign(query, { keyword: '', category: '', status: '', current: 1 })
+  Object.assign(query, { keyword: '', category: '', status: '', auditStatus: '', current: 1 })
   load()
+}
+
+async function audit(activity, auditStatus) {
+  let rejectReason = null
+  if (auditStatus === 'REJECTED') {
+    try {
+      const result = await ElMessageBox.prompt(
+        '请填写拒绝原因，用户修改活动时会看到该说明。',
+        '拒绝活动',
+        {
+          confirmButtonText: '确认拒绝',
+          cancelButtonText: '取消',
+          inputType: 'textarea',
+          inputValidator: (value) => Boolean(value && value.trim()) || '拒绝原因不能为空'
+        }
+      )
+      rejectReason = result.value.trim()
+    } catch {
+      return
+    }
+  }
+  auditLoadingId.value = activity.id
+  try {
+    const updated = await adminAuditActivity(activity.id, { auditStatus, rejectReason })
+    if (detail.value?.id === activity.id) {
+      detail.value = updated
+    }
+    ElMessage.success(auditStatus === 'APPROVED' ? '活动已通过审核' : '活动已拒绝')
+    await load()
+  } finally {
+    auditLoadingId.value = null
+  }
 }
 
 async function showDetail(id) {
@@ -192,6 +285,16 @@ function statusType(status) {
   if (status === 'FULL') return 'warning'
   if (status === 'ONGOING') return 'success'
   return 'primary'
+}
+
+function auditStatusText(status) {
+  return auditStatuses.find((item) => item.value === status)?.label || status || '待审核'
+}
+
+function auditStatusType(status) {
+  if (status === 'APPROVED') return 'success'
+  if (status === 'REJECTED') return 'danger'
+  return 'warning'
 }
 
 function signupStatusText(status) {

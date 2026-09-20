@@ -74,6 +74,10 @@ INSERT INTO activity (creator_id,title,category,tags,start_time,end_time,signup_
 (@host_a,'[CITY_PARTY_DEMO] 周末飞盘体验','运动','周末,新手友好',DATE_ADD(NOW(),INTERVAL 4 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 4 DAY),INTERVAL 2 HOUR),DATE_ADD(NOW(),INTERVAL 3 DAY),'北京','演示地点 F',116.390000,39.910000,4,12,'FREE',0,NULL,NULL,'[CITY_PARTY_DEMO] 面向新手的周末飞盘活动',NULL,0,'SIGNING',4,3,DATE_SUB(NOW(),INTERVAL 5 DAY),NOW(),0),
 (@host_b,'[CITY_PARTY_DEMO] 低预算桌游茶话会','桌游','轻社交,低预算',DATE_ADD(NOW(),INTERVAL 6 DAY),DATE_ADD(DATE_ADD(NOW(),INTERVAL 6 DAY),INTERVAL 3 HOUR),DATE_ADD(NOW(),INTERVAL 5 DAY),'上海','演示地点 G',121.460000,31.225000,2,8,'AA',35,'演示 AA 规则',NULL,'[CITY_PARTY_DEMO] 低预算轻社交活动',NULL,0,'SIGNING',2,5,DATE_SUB(NOW(),INTERVAL 4 DAY),NOW(),0);
 
+UPDATE activity
+SET audit_status = 'APPROVED', audit_time = created_at
+WHERE title LIKE '[CITY_PARTY_DEMO]%';
+
 SET @finished=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 城市徒步回顾');
 SET @cancelled=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 取消的观影局');
 SET @full=(SELECT id FROM activity WHERE BINARY title='[CITY_PARTY_DEMO] 桌游满员局');

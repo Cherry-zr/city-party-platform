@@ -53,6 +53,7 @@ public class ActivityService {
     private final UserMapper userMapper;
     private final UserProfileMapper userProfileMapper;
     private final ActivityWaitlistMapper waitlistMapper;
+    private final PublicActivityCacheService publicActivityCacheService;
 
     @Transactional(rollbackFor = Exception.class)
     public ActivityVO create(ActivityCreateDTO dto) {
@@ -79,6 +80,10 @@ public class ActivityService {
         activity.setDescription(dto.getDescription());
         activity.setNotes(dto.getNotes());
         activity.setNeedApproval(Boolean.TRUE.equals(dto.getNeedApproval()) ? 1 : 0);
+        activity.setAuditStatus("PENDING");
+        activity.setRejectReason(null);
+        activity.setAuditTime(null);
+        activity.setReviewerId(null);
         activity.setStatus("SIGNING");
         activity.setApprovedCount(0);
         activity.setFavoriteCount(0);
@@ -93,9 +98,13 @@ public class ActivityService {
     public PageResult<ActivityVO> page(String keyword, String category, String tag, String city, String status, long current, long size) {
         LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getDeleted, 0)
-                .orderByDesc(Activity::getCreatedAt);
+                .eq(Activity::getAuditStatus, "APPROVED")
+                .orderByDesc(Activity::getAuditTime)
+                .orderByDesc(Activity::getId);
         if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(Activity::getTitle, keyword).or().like(Activity::getDescription, keyword));
+            wrapper.and(w -> w.like(Activity::getTitle, keyword)
+                    .or().like(Activity::getDescription, keyword)
+                    .or().like(Activity::getAddress, keyword));
         }
         if (StringUtils.hasText(category)) {
             wrapper.eq(Activity::getCategory, category);
@@ -111,6 +120,35 @@ public class ActivityService {
         }
         Page<Activity> page = activityMapper.selectPage(PageUtils.page(current, size), wrapper);
         return new PageResult<>(page.getRecords().stream().map(this::toVO).toList(), page.getTotal(), page.getCurrent(), page.getSize());
+    }
+
+    public PageResult<ActivityVO> adminPage(String keyword,
+                                            String category,
+                                            String status,
+                                            String auditStatus,
+                                            long current,
+                                            long size) {
+        LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<Activity>()
+                .eq(Activity::getDeleted, 0)
+                .orderByDesc(Activity::getCreatedAt)
+                .orderByDesc(Activity::getId);
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w.like(Activity::getTitle, keyword)
+                    .or().like(Activity::getDescription, keyword)
+                    .or().like(Activity::getAddress, keyword));
+        }
+        if (StringUtils.hasText(category)) {
+            wrapper.eq(Activity::getCategory, category);
+        }
+        if (StringUtils.hasText(status)) {
+            wrapper.eq(Activity::getStatus, status);
+        }
+        if (StringUtils.hasText(auditStatus)) {
+            wrapper.eq(Activity::getAuditStatus, auditStatus);
+        }
+        Page<Activity> page = activityMapper.selectPage(PageUtils.page(current, size), wrapper);
+        return new PageResult<>(page.getRecords().stream().map(this::toVO).toList(),
+                page.getTotal(), page.getCurrent(), page.getSize());
     }
 
     public PageResult<ActivityVO> nearby(BigDecimal longitude,
@@ -129,6 +167,7 @@ public class ActivityService {
         }
         LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<Activity>()
                 .eq(Activity::getDeleted, 0)
+                .eq(Activity::getAuditStatus, "APPROVED")
                 .isNotNull(Activity::getLongitude)
                 .isNotNull(Activity::getLatitude);
         applyBoundingBox(wrapper, longitude, latitude, maxDistance);
@@ -157,12 +196,15 @@ public class ActivityService {
     }
 
     public ActivityVO detail(Long id) {
-        return toVO(requireActivity(id));
+        Activity activity = requireActivity(id);
+        ensureCanView(activity);
+        return toVO(activity);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public ActivityVO update(Long id, ActivityCreateDTO dto) {
         Activity activity = validateUpdateRequest(id, dto);
+        boolean wasPublic = isPubliclyVisible(activity);
         LocalDateTime now = LocalDateTime.now();
         activity.setTitle(dto.getTitle());
         activity.setCategory(dto.getCategory());
@@ -183,11 +225,20 @@ public class ActivityService {
         activity.setDescription(dto.getDescription());
         activity.setNotes(dto.getNotes());
         activity.setNeedApproval(Boolean.TRUE.equals(dto.getNeedApproval()) ? 1 : 0);
+        if (!UserContext.isAdmin()) {
+            activity.setAuditStatus("PENDING");
+            activity.setRejectReason(null);
+            activity.setAuditTime(null);
+            activity.setReviewerId(null);
+        }
         activity.setUpdatedAt(now);
         activityMapper.updateById(activity);
         activityTagMapper.delete(new LambdaQueryWrapper<ActivityTag>().eq(ActivityTag::getActivityId, id));
         saveTags(id, dto.getTags());
         activityMapper.refreshJoinableStatus(id, now);
+        if (wasPublic || isPubliclyVisible(activity)) {
+            publicActivityCacheService.evictRecommendationCachesAfterCommit();
+        }
         return detail(id);
     }
 
@@ -202,6 +253,9 @@ public class ActivityService {
             activity.setStatus("CANCELLED");
             activity.setUpdatedAt(LocalDateTime.now());
             activityMapper.updateById(activity);
+            if (isPubliclyVisible(activity)) {
+                publicActivityCacheService.evictRecommendationCachesAfterCommit();
+            }
         }
         return detail(id);
     }
@@ -225,6 +279,9 @@ public class ActivityService {
         }
         activity.setUpdatedAt(now);
         activityMapper.updateById(activity);
+        if (isPubliclyVisible(activity)) {
+            publicActivityCacheService.evictRecommendationCachesAfterCommit();
+        }
         return detail(id);
     }
 
@@ -250,6 +307,20 @@ public class ActivityService {
             throw new BusinessException("活动不存在");
         }
         return activity;
+    }
+
+    public Activity requireApprovedActivity(Long id) {
+        Activity activity = requireActivity(id);
+        if (!isPubliclyVisible(activity)) {
+            throw new BusinessException(404, "活动不存在或尚未通过审核");
+        }
+        return activity;
+    }
+
+    public boolean isPubliclyVisible(Activity activity) {
+        return activity != null
+                && Integer.valueOf(0).equals(activity.getDeleted())
+                && "APPROVED".equals(activity.getAuditStatus());
     }
 
     public void validateCreateRequest(ActivityCreateDTO dto) {
@@ -293,6 +364,7 @@ public class ActivityService {
         vo.setDescription(activity.getDescription());
         vo.setNotes(activity.getNotes());
         vo.setNeedApproval(Integer.valueOf(1).equals(activity.getNeedApproval()));
+        vo.setAuditStatus(activity.getAuditStatus());
         vo.setStatus(activity.getStatus());
         vo.setApprovedCount(activity.getApprovedCount());
         vo.setFavoriteCount(activity.getFavoriteCount());
@@ -306,6 +378,11 @@ public class ActivityService {
         vo.setCreatorNickname(creator.getNickname());
         vo.setCreatorAvatar(creator.getAvatarUrl());
         Long userId = UserContext.getUserIdOrNull();
+        if (userId != null && (activity.getCreatorId().equals(userId) || UserContext.isAdmin())) {
+            vo.setRejectReason(activity.getRejectReason());
+            vo.setAuditTime(activity.getAuditTime());
+            vo.setReviewerId(activity.getReviewerId());
+        }
         if (userId == null) {
             vo.setFavorited(false);
             vo.setSignupStatus(null);
@@ -324,6 +401,7 @@ public class ActivityService {
                 .last("limit 1"));
         vo.setSignupStatus(signup == null ? null : signup.getStatus());
         vo.setCanJoinWaitlist(activity.getApprovedCount() >= activity.getMaxParticipants()
+                && isPubliclyVisible(activity)
                 && !activity.getCreatorId().equals(userId)
                 && (signup == null || (!"PENDING".equals(signup.getStatus())
                 && !"APPROVED".equals(signup.getStatus())
@@ -363,6 +441,17 @@ public class ActivityService {
         if (dto.getSignupDeadline().isAfter(dto.getStartTime())) {
             throw new BusinessException("Signup deadline cannot be after activity start time.");
         }
+    }
+
+    private void ensureCanView(Activity activity) {
+        if (isPubliclyVisible(activity)) {
+            return;
+        }
+        Long userId = UserContext.getUserIdOrNull();
+        if (userId != null && (activity.getCreatorId().equals(userId) || UserContext.isAdmin())) {
+            return;
+        }
+        throw new BusinessException(404, "活动不存在");
     }
 
     private void validateParticipantLimits(ActivityCreateDTO dto, Activity current) {

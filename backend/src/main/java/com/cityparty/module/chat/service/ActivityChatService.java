@@ -53,6 +53,11 @@ public class ActivityChatService {
             vo.setReason("活动发起人可以进入群聊");
             return vo;
         }
+        if (!"APPROVED".equals(activity.getAuditStatus())) {
+            vo.setCanAccess(false);
+            vo.setReason("活动尚未通过平台审核");
+            return vo;
+        }
 
         ActivitySignup signup = latestSignup(activityId, userId);
         if (signup == null) {

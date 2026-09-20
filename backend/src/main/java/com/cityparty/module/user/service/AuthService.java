@@ -37,6 +37,8 @@ public class AuthService {
     private final PasswordUtils passwordUtils;
     private final JwtUtils jwtUtils;
     private final UserService userService;
+    private final RegistrationCaptchaService registrationCaptchaService;
+    private final RegistrationRateLimitService registrationRateLimitService;
 
     public CaptchaVO captcha() {
         String key = UUID.randomUUID().toString().replace("-", "");
@@ -46,8 +48,9 @@ public class AuthService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public LoginVO register(RegisterDTO dto) {
-        verifyCaptcha(dto.getCaptchaKey(), dto.getCaptchaCode());
+    public LoginVO register(RegisterDTO dto, String clientIp) {
+        registrationRateLimitService.checkRegistration(clientIp);
+        registrationCaptchaService.consumeToken(dto.getCaptchaToken(), clientIp);
         User existed = userMapper.selectOne(new LambdaQueryWrapper<User>()
                 .eq(User::getUsername, dto.getUsername())
                 .last("limit 1"));
@@ -116,7 +119,10 @@ public class AuthService {
         if (!storedCode.equalsIgnoreCase(code)) {
             throw new BusinessException("验证码错误");
         }
-        stringRedisTemplate.delete(redisKey);
+        String consumedCode = stringRedisTemplate.opsForValue().getAndDelete(redisKey);
+        if (!storedCode.equalsIgnoreCase(consumedCode)) {
+            throw new BusinessException("验证码已过期或已使用");
+        }
     }
 
     private String randomCode() {

@@ -250,6 +250,24 @@ test('login, activity list, detail, publish, edit, cancel and finish flow', asyn
     headers: { Authorization: `Bearer ${session.token}` },
     data: activityPayload(cancelTitle)
   })
+  expect(created.auditStatus).toBe('PENDING')
+  const hiddenBeforeAudit = await apiOk(
+    request,
+    'GET',
+    '/api/activities?keyword=' + encodeURIComponent(cancelTitle)
+  )
+  expect(hiddenBeforeAudit.records).toEqual([])
+  const adminSession = await login(request, 'admin')
+  await apiOk(request, 'PATCH', '/api/admin/activities/' + created.id + '/audit', {
+    headers: { Authorization: `Bearer ${adminSession.token}` },
+    data: { auditStatus: 'APPROVED', rejectReason: null }
+  })
+  const publicAfterAudit = await apiOk(
+    request,
+    'GET',
+    '/api/activities?keyword=' + encodeURIComponent(cancelTitle)
+  )
+  expect(publicAfterAudit.records.map((item) => item.id)).toContain(created.id)
   await page.goto(`/activities/${created.id}`)
   await expect(page.getByRole('heading', { name: cancelTitle })).toBeVisible()
 
@@ -263,8 +281,50 @@ test('login, activity list, detail, publish, edit, cancel and finish flow', asyn
   await apiOk(request, 'PATCH', `/api/activities/${created.id}/cancel`, {
     headers: { Authorization: `Bearer ${session.token}` }
   })
-  const cancelled = await apiOk(request, 'GET', `/api/activities/${created.id}`)
+  const cancelled = await apiOk(request, 'GET', `/api/activities/${created.id}`, {
+    headers: { Authorization: `Bearer ${session.token}` }
+  })
   expect(cancelled.status).toBe('CANCELLED')
+
+  const rejectedTitle = `${testPrefix}_rejected`
+  const rejected = await apiOk(request, 'POST', '/api/activities', {
+    headers: { Authorization: `Bearer ${session.token}` },
+    data: activityPayload(rejectedTitle)
+  })
+  const adminPage = await page.context().newPage()
+  await seedSession(adminPage, adminSession)
+  await adminPage.goto('/admin/activities')
+  await expect(adminPage.getByRole('heading', { name: '活动管理' })).toBeVisible()
+  const rejectedRow = adminPage.locator('.el-table__row', { hasText: rejectedTitle })
+  await expect(rejectedRow).toBeVisible()
+  await rejectedRow.getByRole('button', { name: '拒绝' }).click()
+  await adminPage.locator('.el-message-box textarea').fill('地址信息需要补充')
+  await adminPage.getByRole('button', { name: '确认拒绝' }).click()
+  await expect(adminPage.locator('.el-message--success')).toContainText('活动已拒绝')
+  await adminPage.close()
+  await page.evaluate(({ token, user }) => {
+    window.localStorage.setItem('token', token)
+    window.localStorage.setItem('user', JSON.stringify(user))
+  }, session)
+
+  const rejectedDetail = await apiOk(request, 'GET', '/api/activities/' + rejected.id, {
+    headers: { Authorization: `Bearer ${session.token}` }
+  })
+  expect(rejectedDetail.auditStatus).toBe('REJECTED')
+  expect(rejectedDetail.rejectReason).toBe('地址信息需要补充')
+  await page.goto('/my-activities')
+  await expect(page.getByText(rejectedTitle, { exact: true })).toBeVisible()
+  await expect(page.getByText(/地址信息需要补充/)).toBeVisible()
+  await page.getByRole('button', { name: '修改并重新提交' }).click()
+  const resubmittedTitle = rejectedTitle + '_resubmitted'
+  await page.locator('.van-field', { hasText: '标题' }).locator('input').fill(resubmittedTitle)
+  await page.getByRole('button', { name: '保存修改' }).click()
+  await expect(page).toHaveURL(new RegExp('/activities/' + rejected.id))
+  const resubmitted = await apiOk(request, 'GET', '/api/activities/' + rejected.id, {
+    headers: { Authorization: `Bearer ${session.token}` }
+  })
+  expect(resubmitted.auditStatus).toBe('PENDING')
+  expect(resubmitted.rejectReason).toBeNull()
 
   const finishTitle = `${testPrefix}_finish`
   const started = await apiOk(request, 'POST', '/api/activities', {
@@ -274,7 +334,9 @@ test('login, activity list, detail, publish, edit, cancel and finish flow', asyn
   await apiOk(request, 'PATCH', `/api/activities/${started.id}/finish`, {
     headers: { Authorization: `Bearer ${session.token}` }
   })
-  const finished = await apiOk(request, 'GET', `/api/activities/${started.id}`)
+  const finished = await apiOk(request, 'GET', `/api/activities/${started.id}`, {
+    headers: { Authorization: `Bearer ${session.token}` }
+  })
   expect(finished.status).toBe('FINISHED')
   expect(consoleMessages).toEqual([])
 })
@@ -379,7 +441,8 @@ test('guest home keeps the original activity flow without requesting recommendat
 test('logged-in home shows explainable recommendations and opens activity detail', async ({ page }) => {
   await silenceBrowserDefaultRequests(page)
   await mockHomeBrowserEnvironment(page)
-  await mockRecommendationHomeApis(page)
+  const recommendationRequests = []
+  await mockRecommendationHomeApis(page, (url) => recommendationRequests.push(url))
   await seedRecommendationSession(page)
 
   await page.goto('/')
@@ -393,6 +456,7 @@ test('logged-in home shows explainable recommendations and opens activity detail
   await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
   await page.getByText('运动', { exact: true }).first().click()
   await expect(page.getByText(homeRecommendedActivity.title)).toBeVisible()
+  await expect.poll(() => recommendationRequests.at(-1)?.searchParams.get('category')).toBe('运动')
 
   await page.getByRole('button', { name: '使用位置优化' }).click()
   await expect(page.locator('.van-toast')).toContainText('定位权限未开启')
@@ -467,7 +531,8 @@ test('admin dashboard, analytics ranges and user route guard', async ({ page, re
 
   await page.goto('/admin/analytics')
   await expect(page).toHaveURL(/\/admin\/analytics/)
-  await expect.poll(async () => page.locator('canvas').count()).toBeGreaterThanOrEqual(8)
+  await expect(page.locator('.admin-grid-two .admin-panel')).toHaveCount(9)
+  await expect.poll(async () => page.locator('canvas').count()).toBeGreaterThan(0)
 
   await page.locator('label:has(input[value="LAST_90_DAYS"])').click()
   await expect(page.locator('.analytics-range')).toContainText('2026')
@@ -491,6 +556,243 @@ test('admin dashboard, analytics ranges and user route guard', async ({ page, re
   await userPage.close()
   expect(consoleMessages).toEqual([])
 })
+
+test('registration slider produces a one-time token used by register request', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  let verificationPayload = null
+  let registrationPayload = null
+  const pixel =
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
+    const request = route.request()
+    const pathname = new URL(request.url()).pathname
+    let data = { records: [], total: 0 }
+    if (pathname === '/api/auth/register-captcha/challenge') {
+      data = {
+        challengeId: 'a'.repeat(32),
+        backgroundImage: pixel,
+        sliderImage: pixel,
+        imageWidth: 320,
+        imageHeight: 160,
+        sliderWidth: 44,
+        sliderHeight: 44,
+        sliderY: 50,
+        expiresInSeconds: 120
+      }
+    } else if (pathname === '/api/auth/register-captcha/verify') {
+      verificationPayload = request.postDataJSON()
+      data = { captchaToken: 'b'.repeat(32), expiresInSeconds: 300 }
+    } else if (pathname === '/api/auth/register') {
+      registrationPayload = request.postDataJSON()
+      data = {
+        token: 'registration-session-token',
+        user: { id: 99, username: 'slider_user', nickname: '滑块用户', role: 'USER', city: '北京' }
+      }
+    } else if (pathname === '/api/notices/unread-count') {
+      data = 0
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data })
+    })
+  })
+
+  await page.goto('/register')
+  await page.locator('.van-field', { hasText: '账号' }).locator('input').fill('slider_user')
+  await page.locator('.van-field', { hasText: '密码' }).locator('input').fill('SafePassword123')
+  const slider = page.getByTestId('registration-captcha-slider')
+  await expect(slider).toBeVisible()
+  await slider.evaluate(async (element) => {
+    element.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+    for (const value of [60, 130, 210]) {
+      element.value = String(value)
+      element.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+    await new Promise((resolve) => setTimeout(resolve, 450))
+    element.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  await expect(page.getByText('验证通过', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '注册并登录' }).click()
+  await expect(page).toHaveURL('/')
+
+  expect(verificationPayload.challengeId).toBe('a'.repeat(32))
+  expect(verificationPayload.trace.length).toBeGreaterThanOrEqual(3)
+  expect(registrationPayload.captchaToken).toBe('b'.repeat(32))
+  expect(registrationPayload.captchaCode).toBeUndefined()
+})
+
+test('map location keeps browser coordinates, map center and geocoded city in sync', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  await installMockAmap(page)
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'geolocation', {
+      configurable: true,
+      value: {
+        getCurrentPosition(success) {
+          success({ coords: { longitude: 113.264385, latitude: 23.129112 } })
+        }
+      }
+    })
+  })
+  let nearbyRequest = null
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
+    const url = new URL(route.request().url())
+    if (url.pathname === '/api/activities/nearby') {
+      nearbyRequest = url
+    }
+    const data = url.pathname === '/api/notices/unread-count'
+      ? 0
+      : { records: [], total: 0 }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data })
+    })
+  })
+  await seedSession(page, {
+    token: 'map-user-token',
+    user: { id: 6, username: 'map_user', nickname: '地图用户', role: 'USER', city: '北京' }
+  })
+
+  await page.goto('/map')
+  await expect(page.getByText('已定位到当前位置，城市：广州市')).toBeVisible()
+  await expect.poll(() => nearbyRequest?.searchParams.get('longitude')).toBe('113.264385')
+  expect(nearbyRequest.searchParams.get('latitude')).toBe('23.129112')
+  expect(await page.evaluate(() => window.__mapCenter)).toEqual([113.264385, 23.129112])
+})
+
+test('publish location picker shows city-scoped suggestions and clears stale point after city change', async ({ page }) => {
+  await silenceBrowserDefaultRequests(page)
+  await installMockAmap(page)
+  await page.route(/^https?:\/\/[^/]+\/api\//, async (route) => {
+    const data = new URL(route.request().url()).pathname === '/api/notices/unread-count'
+      ? 0
+      : { records: [], total: 0 }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, data })
+    })
+  })
+  await seedSession(page, {
+    token: 'picker-user-token',
+    user: { id: 7, username: 'picker_user', nickname: '选点用户', role: 'USER', city: '广州' }
+  })
+
+  await page.goto('/publish')
+  const cityInput = page.locator('.van-field', { hasText: '城市' }).first().locator('input')
+  await cityInput.fill('广州')
+  await page.getByRole('button', { name: '选择地点' }).click()
+  await page.getByPlaceholder('搜索地点或地址').fill('万达')
+  await expect(page.getByText('广州万达广场', { exact: true })).toBeVisible()
+  await page.getByText('广州万达广场', { exact: true }).click()
+  await expect.poll(() => page.evaluate(() => window.__autocompleteCity)).toBe('广州')
+  await page.locator('.location-picker').getByText('确定', { exact: true }).click()
+
+  const addressInput = page.locator('.van-field', { hasText: '地址' }).first().locator('input')
+  const longitudeInput = page.locator('.van-field', { hasText: '经度' }).first().locator('input')
+  await expect(addressInput).toHaveValue(/广州万达广场/)
+  await expect(longitudeInput).toHaveValue('113.327')
+
+  await cityInput.fill('深圳')
+  await expect(addressInput).toHaveValue('')
+  await expect(longitudeInput).toHaveValue('')
+  await expect(page.locator('.van-toast')).toContainText('城市已变更')
+})
+
+async function installMockAmap(page) {
+  await page.addInitScript(() => {
+    class MockMap {
+      constructor() {
+        window.__mapCenter = null
+      }
+      on() {}
+      add() {}
+      remove() {}
+      setCenter(center) {
+        window.__mapCenter = Array.from(center)
+      }
+    }
+    class MockMarker {
+      constructor(options) {
+        this.position = options.position
+      }
+      on() {}
+      setPosition(position) {
+        this.position = position
+      }
+      getPosition() {
+        return this.position
+      }
+    }
+    class MockGeocoder {
+      getAddress(position, callback) {
+        callback('complete', {
+          regeocode: {
+            formattedAddress: '广东省广州市天河区测试地址',
+            addressComponent: { city: '广州市', province: '广东省' }
+          }
+        })
+      }
+    }
+    class MockAutoComplete {
+      constructor(options) {
+        window.__autocompleteCity = options.city
+      }
+      setCity(city) {
+        window.__autocompleteCity = city
+      }
+      search(keyword, callback) {
+        callback('complete', {
+          tips: [{
+            id: 'mock-poi-1',
+            name: '广州万达广场',
+            district: '广州市天河区',
+            address: '天河路',
+            cityname: '广州',
+            location: { lng: 113.327, lat: 23.132 }
+          }]
+        })
+      }
+    }
+    class MockPlaceSearch {
+      constructor(options) {
+        this.city = options.city
+      }
+      setCity(city) {
+        this.city = city
+      }
+      search(keyword, callback) {
+        callback('complete', {
+          poiList: {
+            pois: [{
+              id: 'mock-poi-1',
+              name: '广州万达广场',
+              address: '天河路',
+              cityname: '广州',
+              location: { lng: 113.327, lat: 23.132 }
+            }]
+          }
+        })
+      }
+    }
+    class MockInfoWindow {
+      setContent() {}
+      open() {}
+    }
+    window.AMap = {
+      Map: MockMap,
+      Marker: MockMarker,
+      Geocoder: MockGeocoder,
+      AutoComplete: MockAutoComplete,
+      PlaceSearch: MockPlaceSearch,
+      InfoWindow: MockInfoWindow,
+      Pixel: class {}
+    }
+  })
+}
 
 test('image cropper submits and removes activity covers and profile avatars', async ({ page }) => {
   await silenceBrowserDefaultRequests(page)
@@ -574,6 +876,8 @@ test('image cropper submits and removes activity covers and profile avatars', as
   await page.goto('/publish')
   await page.locator('.van-field', { hasText: '标题' }).locator('input').fill(activity.title)
   await page.locator('.van-field', { hasText: '地址' }).locator('input').fill(activity.address)
+  await page.locator('.van-field', { hasText: '经度' }).locator('input').fill('116.4')
+  await page.locator('.van-field', { hasText: '纬度' }).locator('input').fill('39.9')
   await page.locator('.van-field', { hasText: '说明' }).locator('textarea').fill(activity.description)
   await page.locator('input[type="file"]').setInputFiles({
     name: 'unsupported.gif',

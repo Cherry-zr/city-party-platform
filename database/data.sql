@@ -39,6 +39,14 @@ INSERT INTO activity (id, creator_id, title, category, tags, start_time, end_tim
 (4, 5, '杭州图书馆自习搭子', '学习', '长期搭子,同校优先,轻社交', '2026-08-10 10:00:00', '2026-08-10 17:00:00', '2026-08-09 21:00:00', '杭州', '浙江图书馆自习区', 120.150000, 30.280000, 2, 5, 'FREE', 0.00, '无费用。', NULL, '一起安静自习，中午可一起吃饭。', '请保持安静，勿频繁闲聊。', 1, 'SIGNING', 0, 1, NOW(), NOW(), 0),
 (5, 2, '桌游轻社交体验局', '桌游', 'AA制,新手友好,轻社交', '2026-07-20 15:00:00', '2026-07-20 18:00:00', '2026-07-19 21:00:00', '北京', '海淀区桌游店', 116.310000, 39.980000, 3, 6, 'AA', 50.00, '桌游店包间费按人数平摊。', NULL, '玩轻策略桌游，新人会讲规则。', '避免放鸽子，临时有事请提前退出。', 0, 'UPCOMING', 3, 0, NOW(), NOW(), 0);
 
+UPDATE activity
+SET audit_status = 'APPROVED', audit_time = created_at
+WHERE id IN (1, 2, 3, 4, 5);
+
+UPDATE activity
+SET audit_status = 'APPROVED', audit_time = created_at
+WHERE id IN (1, 2, 3, 4, 5);
+
 INSERT INTO activity_tag (activity_id, tag_name, created_at) VALUES
 (1, 'AA制', NOW()), (1, '周末', NOW()), (1, '轻社交', NOW()),
 (2, '新手友好', NOW()), (2, '地铁附近', NOW()), (2, '低预算', NOW()),
